@@ -1,8 +1,8 @@
 package catgirl.mvp;
 
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * Inspired by and largely copied from <a href="https://github.com/grandstaish/compartment">Compartment</a> by Bradley Campbell

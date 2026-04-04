@@ -15,12 +15,13 @@ import catgirl.oneesama.data.realm.RealmProvider;
 import catgirl.oneesama.data.settings.RecentlyOpenedChapters;
 import catgirl.oneesama.data.settings.SettingsProvider;
 import catgirl.oneesama.data.settings.SharedSettingsProvider;
+import catgirl.oneesama.data.settings.StorageSettings;
 import dagger.Module;
 import dagger.Provides;
 import io.realm.RealmObject;
-import retrofit.GsonConverterFactory;
-import retrofit.Retrofit;
-import retrofit.RxJavaCallAdapterFactory;
+import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 @Module
 public class ApplicationModule {
@@ -66,6 +67,11 @@ public class ApplicationModule {
     @Provides
     public SettingsProvider<RecentlyOpenedChapters> provideRecentlyOpenedSettingsProvider(Context context) {
         return new SharedSettingsProvider<>(context, RecentlyOpenedChapters.class);
+    }
+
+    @Provides
+    public SettingsProvider<StorageSettings> provideStorageSettingsProvider(Context context) {
+        return new SharedSettingsProvider<>(context, StorageSettings.class);
     }
 
     @Provides

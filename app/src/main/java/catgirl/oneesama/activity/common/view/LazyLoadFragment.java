@@ -2,17 +2,17 @@ package catgirl.oneesama.activity.common.view;
 
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.Nullable;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.Nullable;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import java.util.List;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.mvp.implementations.BasePresenterFragment;
 import catgirl.mvp.Presenter;
@@ -42,9 +42,9 @@ public abstract class LazyLoadFragment<T, P extends Presenter, C>
 
     Handler handler = new Handler();
 
-    @Bind(R.id.Recycler) public RecyclerView recyclerView;
-    @Bind(R.id.Loading) public View loadingView;
-    @Bind(R.id.SwipeLayout) public SwipeRefreshLayout swipeRefreshLayout;
+    @BindView(R.id.Recycler) public RecyclerView recyclerView;
+    @BindView(R.id.Loading) public View loadingView;
+    @BindView(R.id.SwipeLayout) public SwipeRefreshLayout swipeRefreshLayout;
 
     View emptyMessage;
 

@@ -32,8 +32,7 @@ public class RemoveBrokenIdChaptersAndTags {
                         realm.beginTransaction();
 
                         RealmResults<Chapter> chapters = realm
-                                .allObjects(Chapter.class)
-                                .where()
+                                .where(Chapter.class)
                                 .equalTo("tags.id", 0)
                                 .findAll();
 
@@ -41,12 +40,11 @@ public class RemoveBrokenIdChaptersAndTags {
                         deleteChapters.addAll(chapters);
                         for (Chapter chapter : deleteChapters) {
                             Log.d("RemoveBrokenItems", "Removed chapter " + chapter.getTitle());
-                            chapter.removeFromRealm();
+                            chapter.deleteFromRealm();
                         }
 
                         RealmResults<Tag> tags = realm
-                                .allObjects(Tag.class)
-                                .where()
+                                .where(Tag.class)
                                 .equalTo("id", 0)
                                 .findAll();
 
@@ -54,13 +52,13 @@ public class RemoveBrokenIdChaptersAndTags {
                         deleteTags.addAll(tags);
                         for (Tag tag : deleteTags) {
                             Log.d("RemoveBrokenItems", "Removed tag " + tag.getName());
-                            tag.removeFromRealm();
+                            tag.deleteFromRealm();
                         }
 
                         // Remove files belonging to broken chapters
 
                         RealmResults<Chapter> allChapters = realm
-                                .allObjects(Chapter.class);
+                                .where(Chapter.class).findAll();
                         List<Integer> ids = new ArrayList<>();
                         for (Chapter chapter : allChapters) {
                             ids.add(chapter.getId());

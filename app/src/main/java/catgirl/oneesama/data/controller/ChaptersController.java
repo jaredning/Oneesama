@@ -23,9 +23,9 @@ import catgirl.oneesama.data.network.scraper.chaptername.DynastySeriesPage;
 import catgirl.oneesama.data.network.scraper.chaptername.DynastySeriesPageProvider;
 import io.realm.Realm;
 import io.realm.RealmObject;
-import retrofit.GsonConverterFactory;
-import retrofit.Retrofit;
-import retrofit.RxJavaCallAdapterFactory;
+import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -165,7 +165,7 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         List<Tag> tags = new ArrayList<>();
         tags.addAll(chapter.getTags());
 
-        chapter.removeFromRealm();
+        chapter.deleteFromRealm();
 
         // Collect orphaned tags
         for(Tag tag : tags) {
@@ -175,7 +175,7 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
 
         // Clean orphaned tags and pages
         for(RealmObject object : toRemove)
-            object.removeFromRealm();
+            object.deleteFromRealm();
 
         realm.commitTransaction();
         realm.close();
@@ -193,7 +193,7 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         Realm realm = Realm.getDefaultInstance();
         int maxTagId = 1;
 
-        if(realm.allObjects(Tag.class).size() > 0)
+        if(realm.where(Tag.class).findAll().size() > 0)
             maxTagId = realm.where(Tag.class).max("id").intValue() + 1;
 
         for(Tag tag : tags) {
@@ -223,7 +223,7 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         Realm realm = Realm.getDefaultInstance();
         int maxChapterId = 1;
 
-        if(realm.allObjects(Chapter.class).size() > 0)
+        if(realm.where(Chapter.class).findAll().size() > 0)
                 maxChapterId = realm.where(Chapter.class).max("id").intValue() + 1;
 
         Chapter existing = realm.where(Chapter.class)

@@ -1,7 +1,7 @@
 package catgirl.oneesama.activity.main.fragments.browse.fragments.series.view;
 
 import android.content.Intent;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
@@ -43,7 +43,11 @@ public class SeriesFragment
 
     @Override
     protected long getItemId(int position) {
-        return getPresenter().getItem(position).permalink.hashCode();
+        SeriesItem item = getPresenter().getItem(position);
+        if (item != null && item.permalink != null) {
+            return item.permalink.hashCode();
+        }
+        return position;
     }
 
     @Override

@@ -1,14 +1,14 @@
 package catgirl.oneesama.activity.browseseriespage.fragment.view;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.AppBarLayout;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.ViewPropertyAnimatorListener;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.Nullable;
+import com.google.android.material.appbar.AppBarLayout;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.ViewPropertyAnimatorListener;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,13 +17,13 @@ import android.widget.ImageView;
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 
-import net.opacapp.multilinecollapsingtoolbar.CollapsingToolbarLayout;
+import com.google.android.material.appbar.CollapsingToolbarLayout;
 
 import java.util.List;
 
 import javax.inject.Inject;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.mvp.implementations.BasePresenterFragment;
 import catgirl.oneesama.R;
@@ -39,7 +39,7 @@ import catgirl.oneesama.application.Application;
 import catgirl.oneesama.data.controller.ChaptersController;
 import rx.subscriptions.CompositeSubscription;
 
-import static android.support.v4.view.ViewCompat.animate;
+import static androidx.core.view.ViewCompat.animate;
 
 public class BrowseSeriesPageFragment
         extends BasePresenterFragment<BrowseSeriesPagePresenter, BrowseSeriesPageComponent>
@@ -73,16 +73,16 @@ public class BrowseSeriesPageFragment
     @Inject ChaptersController chaptersController;
     CompositeSubscription subscription = new CompositeSubscription();
 
-    @Bind(R.id.Recycler) public RecyclerView recyclerView;
-    @Bind(R.id.Loading) public View loading;
-    @Bind(R.id.ErrorLayout) public View errorLayout;
-    @Bind(R.id.ReloadButton) public View reloadButton;
+    @BindView(R.id.Recycler) public RecyclerView recyclerView;
+    @BindView(R.id.Loading) public View loading;
+    @BindView(R.id.ErrorLayout) public View errorLayout;
+    @BindView(R.id.ReloadButton) public View reloadButton;
 
-    @Bind(R.id.Toolbar) public Toolbar toolbar;
-    @Bind(R.id.ToolbarBackground) public ImageView toolbarBackground;
-    @Bind(R.id.AppBar) public AppBarLayout appBar;
-    @Bind(R.id.CollapsingToolbar) public CollapsingToolbarLayout collapsingToolbar;
-    @Bind(R.id.ToolbarBackgroundShadow) public View shadow;
+    @BindView(R.id.Toolbar) public Toolbar toolbar;
+    @BindView(R.id.ToolbarBackground) public ImageView toolbarBackground;
+    @BindView(R.id.AppBar) public AppBarLayout appBar;
+    @BindView(R.id.CollapsingToolbar) public CollapsingToolbarLayout collapsingToolbar;
+    @BindView(R.id.ToolbarBackgroundShadow) public View shadow;
 
     static final int TYPE_CHAPTER = 0;
     static final int TYPE_VOLUME = 1;
@@ -184,7 +184,7 @@ public class BrowseSeriesPageFragment
 
     @Override
     public void loadCover(String url) {
-        Picasso.with(getActivity()).load(url).into(toolbarBackground, new Callback() {
+        Picasso.get().load(url).into(toolbarBackground, new Callback() {
             @Override
             public void onSuccess() {
                 if (shadow.getVisibility() != View.VISIBLE) {
@@ -203,7 +203,7 @@ public class BrowseSeriesPageFragment
             }
 
             @Override
-            public void onError() {
+            public void onError(Exception e) {
 
             }
         });

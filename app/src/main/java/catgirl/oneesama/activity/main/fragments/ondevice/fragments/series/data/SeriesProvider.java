@@ -29,8 +29,7 @@ public class SeriesProvider extends AutoRefreshableRealmProvider<Tag, SeriesAuth
 
     @Override
     public RealmQuery<Tag> getQuery(Realm realm) {
-        return realm.allObjects(Tag.class)
-                .where()
+        return realm.where(Tag.class)
                 .equalTo("type", UiTag.SERIES);
     }
 
@@ -40,8 +39,7 @@ public class SeriesProvider extends AutoRefreshableRealmProvider<Tag, SeriesAuth
 
         Observable.from(results)
                 .map(series -> {
-                    Tag author = realm.allObjects(Chapter.class)
-                            .where()
+                    Tag author = realm.where(Chapter.class)
                             .equalTo("tags.id", series.getId())
                             .findFirst()
                             .getTags()

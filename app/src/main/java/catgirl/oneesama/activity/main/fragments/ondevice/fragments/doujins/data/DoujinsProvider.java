@@ -28,8 +28,7 @@ public class DoujinsProvider extends AutoRefreshableRealmProvider<Tag, UiTag> {
 
     @Override
     public RealmQuery<Tag> getQuery(Realm realm) {
-        return realm.allObjects(Tag.class)
-                .where()
+        return realm.where(Tag.class)
                 .equalTo("type", UiTag.DOUJIN);
     }
 

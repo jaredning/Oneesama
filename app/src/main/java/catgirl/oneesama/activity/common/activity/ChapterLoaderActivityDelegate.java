@@ -8,9 +8,9 @@ import android.widget.Toast;
 
 import com.nineoldandroids.animation.Animator;
 import com.nineoldandroids.view.ViewHelper;
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.activity.legacyreader.activityreader.ReaderActivity;
@@ -41,7 +41,7 @@ public class ChapterLoaderActivityDelegate {
     static Observable<Book> chapterRequest;
     Subscription chapterSubscription;
 
-    @Bind(R.id.MainActivity_LoadingLayout) View loadingLayout;
+    @BindView(R.id.MainActivity_LoadingLayout) View loadingLayout;
 
     boolean loading = false;
 
@@ -110,7 +110,7 @@ public class ChapterLoaderActivityDelegate {
             }
             eventParameters = eventParameters.substring(0, eventParameters.length() - 1);
             eventParameters += "]}";
-            YandexMetrica.reportEvent("Chapter added", eventParameters);
+//            AppMetrica.reportEvent("Chapter added", eventParameters);
 
             Intent readerIntent = new Intent(activity, ReaderActivity.class);
             readerIntent.putExtra(ReaderActivity.PUBLICATION_ID, response.data.getId());

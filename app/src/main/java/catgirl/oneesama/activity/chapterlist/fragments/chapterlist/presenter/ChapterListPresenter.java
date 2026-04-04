@@ -1,7 +1,7 @@
 package catgirl.oneesama.activity.chapterlist.fragments.chapterlist.presenter;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import java.util.List;
 

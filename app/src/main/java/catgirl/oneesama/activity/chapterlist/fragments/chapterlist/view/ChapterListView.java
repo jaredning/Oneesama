@@ -1,7 +1,7 @@
 package catgirl.oneesama.activity.chapterlist.fragments.chapterlist.view;
 
 import android.graphics.Bitmap;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import catgirl.oneesama.activity.chapterlist.fragments.chapterlist.data.model.ChapterAuthor;
 import catgirl.oneesama.activity.common.view.SimpleRecyclerView;

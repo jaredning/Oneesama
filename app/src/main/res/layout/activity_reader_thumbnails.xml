@@ -7,7 +7,7 @@
         android:layout_width="match_parent" android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <android.support.v7.widget.Toolbar
+        <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar_layout"
             android:layout_height="?attr/actionBarSize"
             android:layout_width="match_parent"
@@ -22,7 +22,7 @@
             android:clipChildren="false"
             android:clipToPadding="false">
 
-            <org.lucasr.smoothie.AsyncGridView
+            <GridView
                 android:id="@+id/PageOverviewGrid"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -34,7 +34,7 @@
                 android:clipToPadding="false"
                 android:listSelector="#00000000"
                 android:paddingTop="15dp">
-            </org.lucasr.smoothie.AsyncGridView>
+            </GridView>
 
             <View
                 android:layout_width="match_parent"

@@ -1,11 +1,11 @@
 package catgirl.oneesama.activity.main.fragments.history.view;
 
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.activity.common.view.ChapterViewHolderStatusDelegate;
@@ -19,9 +19,9 @@ public class HistoryViewHolder extends RecyclerView.ViewHolder {
     private final ChapterViewHolderStatusDelegate statusDelegate;
     private ActionDelegate delegate;
 
-    @Bind(R.id.Item_Chapter_Title) protected TextView title;
-    @Bind(R.id.Item_Chapter_DeleteButton) ImageButton deleteButton;
-    @Bind(R.id.Item_Chapter_Author) TextView author;
+    @BindView(R.id.Item_Chapter_Title) protected TextView title;
+    @BindView(R.id.Item_Chapter_DeleteButton) ImageButton deleteButton;
+    @BindView(R.id.Item_Chapter_Author) TextView author;
 
     public HistoryViewHolder(View itemView, ChaptersController chaptersController, CompositeSubscription compositeSubscription) {
         super(itemView);

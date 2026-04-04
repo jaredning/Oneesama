@@ -1,11 +1,11 @@
 package catgirl.oneesama.activity.main.fragments.ondevice;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.TabLayout;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
+import androidx.annotation.Nullable;
+import com.google.android.material.tabs.TabLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.viewpager.widget.ViewPager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,7 +13,7 @@ import android.view.ViewGroup;
 import java.util.ArrayList;
 import java.util.List;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.activity.main.fragments.ondevice.fragments.doujins.view.DoujinsFragment;
@@ -22,8 +22,8 @@ import catgirl.oneesama.activity.main.fragments.ondevice.fragments.series.view.S
 
 public class OnDeviceFragment extends Fragment {
 
-    @Bind(R.id.Fragment_OnDevice_ViewPager) ViewPager viewPager;
-    @Bind(R.id.Fragment_OnDevice_TabLayout) TabLayout tabLayout;
+    @BindView(R.id.Fragment_OnDevice_ViewPager) ViewPager viewPager;
+    @BindView(R.id.Fragment_OnDevice_TabLayout) TabLayout tabLayout;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {

@@ -7,7 +7,7 @@ import com.nineoldandroids.animation.Animator;
 import com.nineoldandroids.view.ViewHelper;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.activity.legacyreader.tools.EndAnimatorListener;
@@ -29,12 +29,12 @@ public class ChapterViewHolderStatusDelegate implements BookStateDelegate {
     private final CompositeSubscription compositeSubscription;
     Subscription subscription;
 
-    @Bind(R.id.Item_Chapter_StatusLayout) View statusLayout;
-    @Bind(R.id.Item_Chapter_ProgressLayout) View progressLayout;
-    @Bind(R.id.Item_Chapter_DownloadedLayout) View downloadedLayout;
-    @Bind(R.id.Item_Chapter_ReloadLayout) View reloadLayout;
-    @Bind(R.id.Item_Chapter_ProgressBar) ProgressWheel progressBar;
-    @Bind(R.id.Item_Chapter_ProgressBG) ProgressWheel progressBG;
+    @BindView(R.id.Item_Chapter_StatusLayout) View statusLayout;
+    @BindView(R.id.Item_Chapter_ProgressLayout) View progressLayout;
+    @BindView(R.id.Item_Chapter_DownloadedLayout) View downloadedLayout;
+    @BindView(R.id.Item_Chapter_ReloadLayout) View reloadLayout;
+    @BindView(R.id.Item_Chapter_ProgressBar) ProgressWheel progressBar;
+    @BindView(R.id.Item_Chapter_ProgressBG) ProgressWheel progressBG;
 
     Handler handler = new Handler();
     Book controller;

@@ -7,16 +7,17 @@ import java.util.List;
 
 import io.realm.Realm;
 import io.realm.RealmChangeListener;
+import io.realm.RealmModel;
 import io.realm.RealmObject;
 import io.realm.RealmQuery;
 import io.realm.RealmResults;
 import rx.Observable;
 import rx.subjects.PublishSubject;
 
-public abstract class AutoRefreshableRealmProvider<R extends RealmObject, T> {
+public abstract class AutoRefreshableRealmProvider<R extends RealmModel, T> {
     private Realm realm;
     protected PublishSubject<List<T>> subject = PublishSubject.create();
-    protected RealmChangeListener changeListener;
+    protected RealmChangeListener<RealmResults<R>> changeListener;
     protected RealmResults<R> results;
     protected HandlerThread thread;
     protected Handler mainThreadHandler = new Handler();
@@ -31,7 +32,7 @@ public abstract class AutoRefreshableRealmProvider<R extends RealmObject, T> {
 
                 results = getQuery(realm).findAllAsync();
 
-                changeListener = () -> {
+                changeListener = results -> {
                     // Hack to let the download animations work properly
                     if (results.size() == lastCount)
                         return;
@@ -55,7 +56,7 @@ public abstract class AutoRefreshableRealmProvider<R extends RealmObject, T> {
     public void onDestroy() {
         if (thread != null && thread.getLooper() != null) {
             new Handler(thread.getLooper()).post(() -> {
-                results.removeChangeListeners();
+                results.removeAllChangeListeners();
                 realm.close();
                 thread.quit();
             });

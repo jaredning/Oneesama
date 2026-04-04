@@ -47,8 +47,7 @@ public class ChapterListProvider extends AutoRefreshableRealmProvider<Chapter, C
 
     @Override
     public RealmQuery<Chapter> getQuery(Realm realm) {
-        return realm.allObjects(Chapter.class)
-                .where()
+        return realm.where(Chapter.class)
                 .equalTo("tags.id", tagId);
     }
 

@@ -5,26 +5,21 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
-import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
 
-import org.lucasr.smoothie.AsyncGridView;
-import org.lucasr.smoothie.ItemManager;
-import org.lucasr.smoothie.SimpleItemLoader;
-
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.data.controller.ChaptersController;
@@ -36,18 +31,21 @@ import catgirl.oneesama.activity.legacyreader.activityreader.ReaderActivity;
 import catgirl.oneesama.activity.legacyreader.tools.ActivityUtils;
 import catgirl.oneesama.activity.legacyreader.widgets.airviewer.AirPage;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class ReaderThumbnailsActivity extends AppCompatActivity implements BookStateDelegate {
 
-    @Bind(R.id.toolbar_layout) Toolbar toolbar;
-    @Bind(R.id.PageOverviewGrid) AsyncGridView grid;
+    @BindView(R.id.toolbar_layout) Toolbar toolbar;
+    @BindView(R.id.PageOverviewGrid) GridView grid;
 
     Book book;
-//    Bitmap cloud;
     LayoutInflater inflater;
 
     int selectedPage = 0;
     boolean deleteImages = false;
 
+    private ExecutorService executorService = Executors.newFixedThreadPool(5);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,9 +60,11 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
         selectedPage = getIntent().getExtras().getInt(ReaderActivity.CURRENT_PAGE, 0);
         book = ChaptersController.getInstance().getChapterController(id);
 
-        getSupportActionBar().setTitle(R.string.core_reader_thumbnails_title);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(R.string.core_reader_thumbnails_title);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
         toolbar.setNavigationOnClickListener(view -> onBackPressed());
 
         inflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -75,18 +75,9 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
         grid.setColumnWidth(gridWidth);
         grid.setAdapter(adapter);
 
-
-        builder.setPreloadItemsEnabled(true).setPreloadItemsCount(20);
-        builder.setThreadPoolSize(5);
-        ItemManager itemManager = builder.build();
-
-
-        grid.setItemManager(itemManager);
-
         book.addBookStateDelegate(this);
 
         grid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int id,
                                     long rowId) {
@@ -99,18 +90,6 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
                 intent.putExtras(resultBundle);
                 setResult(RESULT_OK, intent);
                 finish();
-            }
-
-        });
-
-        grid.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override
-            public void onScroll(AbsListView arg0, int arg1, int arg2, int arg3) {
-            }
-
-            @Override
-            public void onScrollStateChanged(AbsListView arg0, int arg1) {
-//                book.prioritizeThumbs(grid.getFirstVisiblePosition());
             }
         });
 
@@ -136,6 +115,7 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
     @Override
     protected void onDestroy() {
         MiniBitmapCache.getInstance().mMemoryCache.evictAll();
+        executorService.shutdown();
         super.onDestroy();
     }
 
@@ -148,13 +128,11 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
 
         @Override
         public Object getItem(int position) {
-            // TODO Auto-generated method stub
             return null;
         }
 
         @Override
         public long getItemId(int position) {
-            // TODO Auto-generated method stub
             return 0;
         }
 
@@ -163,13 +141,11 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
             if(position >= book.bookPages.size())
                 return null;
 
-            View gridView = null;
-
-            gridView = new View(ReaderThumbnailsActivity.this);
+            View gridView;
 
             // inflating grid view item
             if(convertView == null)
-                gridView = inflater.inflate(R.layout.item_thumbnail, new GridView(ReaderThumbnailsActivity.this), false);
+                gridView = inflater.inflate(R.layout.item_thumbnail, parent, false);
             else
                 gridView = convertView;
 
@@ -202,13 +178,26 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
 
             Bitmap b = MiniBitmapCache.getInstance().getBitmapFromMemCache(position);
 
-            AirPage p = book.bookPages.get(position).page;
             if(b == null)
             {
                 img.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-//                img.setImageBitmap(cloud);
                 img.setImageBitmap(null);
                 img.setBackgroundColor(Color.TRANSPARENT);
+                
+                final int pos = position;
+                executorService.submit(() -> {
+                    Bitmap decoded = ActivityUtils.decodeBitmap(FileManager.getInputStream(book.data.getId(), book.data.getPages().get(pos)), ActivityUtils.dpToPx(120), ActivityUtils.dpToPx(160));
+                    if (decoded != null) {
+                        MiniBitmapCache.getInstance().addBitmapToMemoryCache(pos, decoded);
+                        runOnUiThread(() -> {
+                            if (gridView.getTag() != null && (int) gridView.getTag() == pos) {
+                                img.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                                img.setImageBitmap(decoded);
+                                img.setBackgroundColor(Color.WHITE);
+                            }
+                        });
+                    }
+                });
             }
             else
             {
@@ -221,48 +210,6 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
         }
 
     };
-
-    ItemManager.Builder builder = new ItemManager.Builder(new SimpleItemLoader<Integer, Bitmap>(){
-        @Override
-        public Bitmap loadItem(Integer itemParams) {
-            int position = itemParams;
-            Bitmap b = ActivityUtils.decodeBitmap(FileManager.getInputStream(book.data.getId(), book.data.getPages().get(position)), ActivityUtils.dpToPx(120), ActivityUtils.dpToPx(160));
-            MiniBitmapCache.getInstance().addBitmapToMemoryCache(position, b);
-
-            return b;
-        }
-
-        @Override
-        public Bitmap loadItemFromMemory(Integer itemParams) {
-            return MiniBitmapCache.getInstance().getBitmapFromMemCache(itemParams);
-        }
-
-        @Override
-        public void displayItem(View itemView, Bitmap result,
-                                boolean fromMemory) {
-            ImageView img = (ImageView) itemView.findViewById(R.id.ThumbnailPagePreview);
-
-
-            AirPage p = book.bookPages.get((Integer) itemView.getTag()).page;
-
-            if (result != null) {
-                img.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                img.setImageBitmap(result);
-                img.setBackgroundColor(Color.WHITE);
-            } else {
-                img.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-//                img.setImageBitmap(cloud);
-                img.setImageBitmap(null);
-                img.setBackgroundColor(Color.TRANSPARENT);
-            }
-        }
-
-        @Override
-        public Integer getItemParams(Adapter adapter, int position) {
-            return position;
-        }
-
-    });
 
     @Override
     public void pageDownloaded(int id, boolean bookDownloaded, int pageId, boolean onlyProgress) {
@@ -277,12 +224,12 @@ public class ReaderThumbnailsActivity extends AppCompatActivity implements BookS
     @Override
     protected void onResume() {
         super.onResume();
-        YandexMetrica.onResumeActivity(this);
+//        AppMetrica.resumeSession(this);
     }
 
     @Override
     protected void onPause() {
-        YandexMetrica.onPauseActivity(this);
+//        AppMetrica.pauseSession(this);
         super.onPause();
     }
 }

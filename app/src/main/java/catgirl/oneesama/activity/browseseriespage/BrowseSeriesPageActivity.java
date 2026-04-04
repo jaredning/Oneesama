@@ -1,9 +1,9 @@
 package catgirl.oneesama.activity.browseseriespage;
 
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.widget.Toolbar;
 
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
 
 import javax.inject.Inject;
 
@@ -58,19 +58,22 @@ public class BrowseSeriesPageActivity
     @Override
     protected void onResume() {
         super.onResume();
-        YandexMetrica.onResumeActivity(this);
+//        AppMetrica.resumeSession(this);
     }
 
     @Override
     protected void onPause() {
-        YandexMetrica.onPauseActivity(this);
+//        AppMetrica.pauseSession(this);
         super.onPause();
     }
 
+    @Override
     public void setSupportActionBar(Toolbar toolbar) {
         super.setSupportActionBar(toolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setDisplayShowHomeEnabled(true);
+        }
         toolbar.setNavigationOnClickListener(view -> onBackPressed());
     }
 

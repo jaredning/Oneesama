@@ -6,15 +6,15 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.support.v7.app.NotificationCompat;
+import androidx.core.app.NotificationCompat;
 
 import catgirl.oneesama.application.Application;
 import catgirl.oneesama.BuildConfig;
 import catgirl.oneesama.R;
 import catgirl.oneesama.application.Config;
-import retrofit.GsonConverterFactory;
-import retrofit.Retrofit;
-import retrofit.RxJavaCallAdapterFactory;
+import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class GithubReleaseChecker {
     public static void checkForNewRelease() {
@@ -41,9 +41,10 @@ public class GithubReleaseChecker {
 
                 Intent i = new Intent(Intent.ACTION_VIEW);
                 i.setData(Uri.parse(url));
-                PendingIntent p = PendingIntent.getActivity(Application.getContextOfApplication(), 0, i, 0);
+                PendingIntent p = PendingIntent.getActivity(Application.getContextOfApplication(), 0, i, PendingIntent.FLAG_IMMUTABLE);
 
-                Notification notification = builder.setContentIntent(p)
+                Notification notification = new NotificationCompat.Builder(Application.getContextOfApplication(), "updates")
+                        .setContentIntent(p)
                         .setSmallIcon(R.mipmap.ic_launcher).setTicker("Oneesama update available").setWhen(0)
                         .setAutoCancel(true).setContentTitle("Oneesama " + name + " is available")
                         .setStyle(new NotificationCompat.BigTextStyle().bigText(body))

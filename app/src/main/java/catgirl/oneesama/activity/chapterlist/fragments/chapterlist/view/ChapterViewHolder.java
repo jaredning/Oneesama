@@ -1,12 +1,12 @@
 package catgirl.oneesama.activity.chapterlist.fragments.chapterlist.view;
 
 import android.content.Context;
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.activity.common.view.ChapterViewHolderStatusDelegate;
@@ -16,10 +16,10 @@ import rx.subscriptions.CompositeSubscription;
 
 public class ChapterViewHolder extends RecyclerView.ViewHolder {
 
-    @Bind(R.id.Item_Chapter_Title) protected TextView title;
-    @Bind(R.id.Item_Chapter_Volume) protected TextView volume;
-    @Bind(R.id.Item_Chapter_DeleteButton) ImageButton deleteButton;
-    @Bind(R.id.Item_Chapter_Author) TextView author;
+    @BindView(R.id.Item_Chapter_Title) protected TextView title;
+    @BindView(R.id.Item_Chapter_Volume) protected TextView volume;
+    @BindView(R.id.Item_Chapter_DeleteButton) ImageButton deleteButton;
+    @BindView(R.id.Item_Chapter_Author) TextView author;
 
     ChapterAuthor data;
     private IActionDelegate delegate;

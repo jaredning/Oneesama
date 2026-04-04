@@ -1,4 +1,7 @@
 <resources>
+    <string name="app_name">Oneesama V2</string>
+    <string name="metrics_token">dummy_token</string>
+
     <string name="title_section1">Section 1</string>
     <string name="title_section2">Section 2</string>
     <string name="title_section3">Section 3</string>

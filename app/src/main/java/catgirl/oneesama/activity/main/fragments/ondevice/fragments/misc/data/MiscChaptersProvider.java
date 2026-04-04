@@ -32,8 +32,7 @@ public class MiscChaptersProvider extends AutoRefreshableRealmProvider<Chapter, 
 
     @Override
     public RealmQuery<Chapter> getQuery(Realm realm) {
-        return realm.allObjects(Chapter.class)
-                .where()
+        return realm.where(Chapter.class)
                 .not()
                 .equalTo("tags.type", UiTag.SERIES)
                 .not()

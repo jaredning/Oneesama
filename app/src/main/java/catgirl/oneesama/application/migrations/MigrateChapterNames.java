@@ -22,8 +22,7 @@ public class MigrateChapterNames {
                         Realm realm = Realm.getDefaultInstance();
 
                         RealmResults<Chapter> chapters = realm
-                                .allObjects(Chapter.class)
-                                .where()
+                                .where(Chapter.class)
                                 .equalTo("tags.type", "Series")
                                 .equalTo("volumeName", (String) null)
                                 .findAll();

@@ -9,14 +9,16 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.design.widget.NavigationView;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.widget.Toolbar;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import com.google.android.material.navigation.NavigationView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -27,14 +29,14 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.mvp.implementations.BaseComponentActivity;
 import catgirl.oneesama.R;
@@ -50,6 +52,8 @@ import catgirl.oneesama.data.model.chapter.serializable.Chapter;
 import catgirl.oneesama.data.model.chapter.serializable.Page;
 import catgirl.oneesama.data.model.chapter.serializable.Tag;
 import catgirl.oneesama.data.realm.RealmProvider;
+import catgirl.oneesama.data.settings.SettingsProvider;
+import catgirl.oneesama.data.settings.StorageSettings;
 import io.realm.Realm;
 import io.realm.RealmObject;
 
@@ -66,6 +70,7 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
 
     @Inject RealmProvider realmProvider;
     @Inject ChaptersController chaptersController;
+    @Inject SettingsProvider<StorageSettings> storageSettingsProvider;
 
     private ActionBarDrawerToggle mDrawerToggle;
 
@@ -73,11 +78,11 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
     private MenuConfig menuConfig;
     private int currentMenuItemId = 0;
 
-    @Bind(R.id.toolbar_layout) Toolbar toolbar;
-    @Bind(R.id.drawer_layout) DrawerLayout mDrawerLayout;
-    @Bind(R.id.MainActivity_NavigationView) NavigationView mNavigationView;
-    @Bind(R.id.container) ViewGroup container;
-    @Bind(R.id.MainActivity_AddButton) ImageButton addButton;
+    @BindView(R.id.toolbar_layout) Toolbar toolbar;
+    @BindView(R.id.drawer_layout) DrawerLayout mDrawerLayout;
+    @BindView(R.id.MainActivity_NavigationView) NavigationView mNavigationView;
+    @BindView(R.id.container) ViewGroup container;
+    @BindView(R.id.MainActivity_AddButton) ImageButton addButton;
 
     ChapterLoaderActivityDelegate chapterLoaderDelegate;
 
@@ -322,6 +327,13 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
             return;
         }
 
+        if(item.type == MenuItemType.ITEM_STORAGE) {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            startActivityForResult(intent, 42);
+            updateUiForFragment(currentMenuItemId);
+            return;
+        }
+
         updateUiForFragment(id);
 
         Class fragmentClass = null;
@@ -395,6 +407,7 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
         ITEM_DYNASTY,
         ITEM_WEBSITE,
         ITEM_HISTORY,
+        ITEM_STORAGE,
         ITEM_SEPARATOR
     }
 
@@ -423,6 +436,7 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
             menuItems.add(new MenuConfigItem(MenuItemType.ITEM_ONDEVICE, getString(R.string.activity_main_ondevice), R.drawable.ic_file_download_black_24dp));
             menuItems.add(new MenuConfigItem(MenuItemType.ITEM_HISTORY, getString(R.string.activity_main_history), R.drawable.ic_history_black_24dp));
             menuItems.add(new MenuConfigItem(MenuItemType.ITEM_BROWSE, getString(R.string.activity_main_browse), R.drawable.ic_library_books_black_24dp));
+            menuItems.add(new MenuConfigItem(MenuItemType.ITEM_STORAGE, "Select Storage Folder", R.drawable.ic_web_black_24dp));
             menuItems.add(MenuConfigItem.getSeparator());
             menuItems.add(new MenuConfigItem(MenuItemType.ITEM_DYNASTY, getString(R.string.activity_main_dynasty), R.drawable.ic_web_black_24dp));
             menuItems.add(new MenuConfigItem(MenuItemType.ITEM_WEBSITE, getString(R.string.activity_main_website), R.drawable.ic_github_circle_black_24dp));
@@ -445,16 +459,16 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
 
         List<RealmObject> toRemove = new ArrayList<>();
 
-        for(Tag tag : realm.allObjects(Tag.class)) {
+        for(Tag tag : realm.where(Tag.class).findAll()) {
             if(realm.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
                 toRemove.add(tag);
         }
-        for(Page page : realm.allObjects(Page.class)) {
+        for(Page page : realm.where(Page.class).findAll()) {
             if(realm.where(Chapter.class).equalTo("pages.url", page.getUrl()).count() == 0)
                 toRemove.add(page);
         }
         for(RealmObject object : toRemove)
-            object.removeFromRealm();
+            object.deleteFromRealm();
 
         realm.commitTransaction();
         realm.close();
@@ -463,12 +477,29 @@ public class MainActivity extends BaseComponentActivity<MainActivityComponent>
     @Override
     protected void onResume() {
         super.onResume();
-        YandexMetrica.onResumeActivity(this);
+//        AppMetrica.resumeSession(this);
     }
 
     @Override
     protected void onPause() {
-        YandexMetrica.onPauseActivity(this);
+//        AppMetrica.pauseSession(this);
         super.onPause();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 42 && resultCode == RESULT_OK) {
+            Uri treeUri = data.getData();
+            if (treeUri != null) {
+                getContentResolver().takePersistableUriPermission(treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                StorageSettings settings = storageSettingsProvider.retrieve();
+                settings.setTreeUri(treeUri.toString());
+                storageSettingsProvider.commit(settings);
+                Toast.makeText(this, "Storage folder updated", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }

@@ -1,11 +1,11 @@
 package catgirl.oneesama.activity.chapterlist;
 
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.widget.Toolbar;
 
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.mvp.implementations.BaseCacheActivity;
 import catgirl.oneesama.R;
@@ -15,7 +15,7 @@ public class ChapterListActivity extends BaseCacheActivity {
 
     public static final String TAG_ID = "tag_id";
 
-    @Bind(R.id.toolbar_layout)
+    @BindView(R.id.toolbar_layout)
     Toolbar toolbar;
 
     @Override
@@ -46,12 +46,12 @@ public class ChapterListActivity extends BaseCacheActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        YandexMetrica.onResumeActivity(this);
+//        AppMetrica.resumeSession(this);
     }
 
     @Override
     protected void onPause() {
-        YandexMetrica.onPauseActivity(this);
+//        AppMetrica.pauseSession(this);
         super.onPause();
     }
 }

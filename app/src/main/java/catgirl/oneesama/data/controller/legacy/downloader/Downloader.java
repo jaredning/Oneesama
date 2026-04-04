@@ -7,8 +7,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.documentfile.provider.DocumentFile;
+
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -161,9 +164,7 @@ public class Downloader {
 
 						boolean success;
 
-					    File file = FileManager.getPageFile(bookId, page);
-					    File src = FileManager.getCache("" + bookId + "_temp" + id + ".publ");
-
+						File src = FileManager.getCache("" + bookId + "_temp" + id + ".publ");
 
 						OutputStream output = null;
 						output = new FileOutputStream(src);
@@ -184,15 +185,40 @@ public class Downloader {
 						output.close();
 						input.input.close();
 
-						if(file.getParentFile() != null)
-							file.getParentFile().mkdirs();
-
-
 						if(isCancelled) {
 							src.delete();
 							success = false;
 						} else {
-							success = src.renameTo(file);
+							DocumentFile chapterDir = FileManager.getChapterDirectory(Application.getContextOfApplication(), bookId);
+							if (chapterDir != null) {
+								String[] parts = page.getUrl().split("/");
+								String fileName = parts[parts.length - 1];
+								DocumentFile file = chapterDir.findFile(fileName);
+								if (file != null) file.delete();
+								file = chapterDir.createFile("image/*", fileName);
+								if (file != null) {
+									try (InputStream in = new FileInputStream(src);
+										 OutputStream out = Application.getContextOfApplication().getContentResolver().openOutputStream(file.getUri())) {
+										byte[] buf = new byte[1024];
+										int len;
+										while ((len = in.read(buf)) > 0) {
+											out.write(buf, 0, len);
+										}
+										success = true;
+									} catch (IOException e) {
+										e.printStackTrace();
+										success = false;
+									}
+									src.delete();
+								} else {
+									success = false;
+								}
+							} else {
+								File file = FileManager.getPageFile(bookId, page);
+								if(file.getParentFile() != null)
+									file.getParentFile().mkdirs();
+								success = src.renameTo(file);
+							}
 						}
 					    
 					    if(!success)
@@ -237,7 +263,6 @@ public class Downloader {
 				{
 					freeId(id);
 				}
-				freeId(id);
 				return;
 
 			}

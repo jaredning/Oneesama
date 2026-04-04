@@ -1,7 +1,7 @@
 package catgirl.oneesama.activity.legacyreader.activityreader;
 
 import android.graphics.Bitmap;
-import android.support.v4.util.LruCache;
+import androidx.collection.LruCache;
 
 public class MiniBitmapCache {
 	private static MiniBitmapCache _cache;

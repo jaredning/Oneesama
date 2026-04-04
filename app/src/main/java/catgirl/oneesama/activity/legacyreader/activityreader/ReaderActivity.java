@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,12 +14,12 @@ import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
 
 import javax.inject.Inject;
 
 import butterknife.ButterKnife;
-import butterknife.Bind;
+import butterknife.BindView;
 import catgirl.oneesama.application.Application;
 import catgirl.oneesama.R;
 import catgirl.oneesama.data.controller.ChaptersController;
@@ -43,13 +43,13 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
     public static final String CURRENT_PAGE = "currentPage";
     private static final int THUMBNAILS_ACTIVITY = 101;
 
-    @Bind(R.id.BookTitleLayout) Toolbar toolbar;
-    @Bind(R.id.ReaderView) ViewGroup readerView;
+    @BindView(R.id.BookTitleLayout) Toolbar toolbar;
+    @BindView(R.id.ReaderView) ViewGroup readerView;
 
-    @Bind(R.id.airrender) AirWidgetDrawer airDrawer;
-    @Bind(R.id.airtouch) AirViewerRecognizer airRecognizer;
+    @BindView(R.id.airrender) AirWidgetDrawer airDrawer;
+    @BindView(R.id.airtouch) AirViewerRecognizer airRecognizer;
 
-    @Bind(R.id.ThumbnailsButton) ImageButton thumbButton;
+    @BindView(R.id.ThumbnailsButton) ImageButton thumbButton;
     private static float cwideratio;
     private static float cx;
     private static float cy;
@@ -211,7 +211,7 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 	public void onResume()
 	{
 		super.onResume();
-		YandexMetrica.onResumeActivity(this);
+//		AppMetrica.resumeSession(this);
 
 		if(book == null)
 		{
@@ -231,7 +231,7 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 
 	@Override
 	protected void onPause() {
-		YandexMetrica.onPauseActivity(this);
+//		AppMetrica.pauseSession(this);
 		super.onPause();
 	}
 	

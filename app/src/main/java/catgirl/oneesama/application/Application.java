@@ -3,7 +3,8 @@ package catgirl.oneesama.application;
 import android.content.Context;
 import android.util.Log;
 
-import com.yandex.metrica.YandexMetrica;
+import io.appmetrica.analytics.AppMetrica;
+import io.appmetrica.analytics.AppMetricaConfig;
 
 import catgirl.oneesama.R;
 import catgirl.oneesama.application.githubchecker.GithubReleaseChecker;
@@ -28,7 +29,8 @@ public class Application extends android.app.Application {
         appContext = this;
 
         // Database configuration
-        RealmConfiguration config = new RealmConfiguration.Builder(this)
+        Realm.init(this);
+        RealmConfiguration config = new RealmConfiguration.Builder()
                 .schemaVersion(1)
                 .migration(new RealmMigration() {
                     @Override
@@ -48,16 +50,14 @@ public class Application extends android.app.Application {
         new MigrationManager().applyMigrations(this.getApplicationContext());
 
         // Check for updates
-        GithubReleaseChecker.checkForNewRelease();
+//        GithubReleaseChecker.checkForNewRelease();
 
         // Dagger component initialization
         applicationComponent = DaggerApplicationComponent.builder().build();
 
         // Analytics
-        YandexMetrica.activate(getApplicationContext(), getString(R.string.metrics_token));
-        YandexMetrica.setSessionTimeout(600);
-        YandexMetrica.setCollectInstalledApps(false);
-        YandexMetrica.setTrackLocationEnabled(false);
+//        AppMetricaConfig appMetricaConfig = AppMetricaConfig.newConfigBuilder(getString(R.string.metrics_token)).build();
+//        AppMetrica.activate(getApplicationContext(), appMetricaConfig);
     }
 
     public static Context getContextOfApplication() {

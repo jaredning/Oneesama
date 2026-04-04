@@ -1,18 +1,18 @@
 package catgirl.oneesama.activity.main.fragments.ondevice.fragments.doujins.view;
 
-import android.support.v7.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.TextView;
 
-import butterknife.Bind;
+import butterknife.BindView;
 import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.data.model.chapter.ui.UiTag;
 
 public class DoujinsViewHolder extends RecyclerView.ViewHolder {
 
-    @Bind(R.id.Item_Series_Author) TextView author;
-    @Bind(R.id.Item_Series_Title) TextView title;
+    @BindView(R.id.Item_Series_Author) TextView author;
+    @BindView(R.id.Item_Series_Title) TextView title;
 
     private SeriesViewHolderDelegate delegate;
 

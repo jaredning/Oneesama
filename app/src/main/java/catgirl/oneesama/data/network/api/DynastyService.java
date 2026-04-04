@@ -7,10 +7,10 @@ import catgirl.oneesama.activity.browseseriespage.fragment.data.model.BrowseSeri
 import catgirl.oneesama.activity.main.fragments.browse.fragments.recent.data.model.RecentChapterPage;
 import catgirl.oneesama.activity.main.fragments.browse.fragments.series.data.model.SeriesItem;
 import catgirl.oneesama.data.model.chapter.serializable.Chapter;
-import retrofit.http.GET;
-import retrofit.http.Headers;
-import retrofit.http.Path;
-import retrofit.http.Query;
+import retrofit2.http.GET;
+import retrofit2.http.Headers;
+import retrofit2.http.Path;
+import retrofit2.http.Query;
 import rx.Observable;
 
 public interface DynastyService {
@@ -24,7 +24,7 @@ public interface DynastyService {
 
     @Headers({"User-Agent: Oneesama-" + BuildConfig.VERSION_NAME + "-Android"})
     @GET("/series.json")
-    Observable<Map<String, SeriesItem[]>> getAllSeries();
+    Observable<Map<String, Object>> getAllSeries();
 
     @Headers({"User-Agent: Oneesama-" + BuildConfig.VERSION_NAME + "-Android"})
     @GET("/series/{permalink}.json")
