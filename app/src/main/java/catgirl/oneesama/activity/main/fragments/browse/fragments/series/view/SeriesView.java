@@ -5,4 +5,5 @@ import catgirl.oneesama.activity.main.fragments.browse.fragments.series.data.mod
 
 public interface SeriesView extends LazyLoadView<SeriesItem> {
     void switchToSeries(String seriesPermalink, String title);
+    void updatePagination(int currentPage, int totalPages);
 }

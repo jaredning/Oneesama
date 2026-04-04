@@ -69,51 +69,7 @@ public class OnDeviceFragment extends Fragment {
             }
         });
 
-        // Hack for flickering TabLayout titles bug https://code.google.com/p/android/issues/detail?id=180454
-        // until it's fixed in Support Design Library
-        // TODO - test upon Support Design Library update and remove
-        viewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout) {
-            int mScrollState;
-            int mScrollPosition;
-            float mScrollOffset;
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-                super.onPageScrollStateChanged(state);
-                mScrollState = state;
-            }
-
-            @Override
-            public void onPageScrolled(int position, float positionOffset,
-                                       int positionOffsetPixels) {
-                super.onPageScrolled(position, positionOffset, positionOffsetPixels);
-                mScrollPosition = position;
-                mScrollOffset = positionOffset;
-            }
-
-            @Override
-            public void onPageSelected(int position) {
-                super.onPageSelected(position);
-                if (mScrollState != ViewPager.SCROLL_STATE_IDLE) {
-                    tabLayout.setScrollPosition(mScrollPosition, mScrollOffset, true);
-                }
-            }
-        });
-
         tabLayout.setupWithViewPager(viewPager);
-
-        tabLayout.setOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-            @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                viewPager.setCurrentItem(tab.getPosition());
-            }
-
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {}
-
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {}
-        });
 
         return view;
     }

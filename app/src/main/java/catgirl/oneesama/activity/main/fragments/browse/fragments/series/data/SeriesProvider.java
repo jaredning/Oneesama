@@ -20,29 +20,48 @@ public class SeriesProvider {
         this.service = service;
     }
 
-    public Observable<LazyLoadResult<SeriesItem>> getMoreSeries() {
-        return getNewSeries().map(result -> new LazyLoadResult<>(result, true));
+    public Observable<LazyLoadResult<SeriesItem>> getMoreSeries(int page) {
+        return getNewSeries(page);
     }
 
-    public Observable<List<SeriesItem>> getNewSeries() {
-        return service.getAllSeries()
+    public Observable<LazyLoadResult<SeriesItem>> getNewSeries(int page) {
+        return service.getAllSeries(page)
                 .map(result -> {
                     List<SeriesItem> seriesList = new ArrayList<>();
                     Gson gson = new Gson();
 
-                    for (Map.Entry<String, Object> entry : result.entrySet()) {
-                        if (entry.getValue() instanceof List) {
-                            String json = gson.toJson(entry.getValue());
-                            SeriesItem[] items = gson.fromJson(json, SeriesItem[].class);
-                            for (SeriesItem item : items) {
-                                if (item.name != null && item.permalink != null) {
-                                    seriesList.add(item);
+                    Object tags = result.get("tags");
+                    if (tags instanceof List) {
+                        List<?> tagsList = (List<?>) tags;
+                        for (Object tagElement : tagsList) {
+                            if (tagElement instanceof Map) {
+                                Map<?, ?> tagMap = (Map<?, ?>) tagElement;
+                                for (Object value : tagMap.values()) {
+                                    if (value instanceof List) {
+                                        String json = gson.toJson(value);
+                                        SeriesItem[] items = gson.fromJson(json, SeriesItem[].class);
+                                        if (items != null) {
+                                            for (SeriesItem item : items) {
+                                                if (item.name != null && item.permalink != null) {
+                                                    seriesList.add(item);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-                    return seriesList;
+                    int totalPages = 1;
+                    Object totalPagesObj = result.get("total_pages");
+                    if (totalPagesObj instanceof Double) {
+                        totalPages = ((Double) totalPagesObj).intValue();
+                    } else if (totalPagesObj instanceof Integer) {
+                        totalPages = (Integer) totalPagesObj;
+                    }
+
+                    return new LazyLoadResult<>(seriesList, page >= totalPages, totalPages);
                 });
     }
 }

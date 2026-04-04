@@ -54,6 +54,10 @@ public abstract class LazyLoadFragment<T, P extends Presenter, C>
         super.onCreateView(inflater, container, savedInstanceState);
 
         ViewGroup view = (ViewGroup) inflater.inflate(R.layout.fragment_refreshable_recycler, container, false);
+        return setupUI(view);
+    }
+
+    protected View setupUI(ViewGroup view) {
         ButterKnife.bind(this, view);
 
         RecyclerView.Adapter<RecyclerView.ViewHolder> adapter = new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -176,12 +180,11 @@ public abstract class LazyLoadFragment<T, P extends Presenter, C>
     public void showNewItems(List<T> items) {
         swipeRefreshLayout.setRefreshing(false);
 
-        boolean shouldScrollUpwards = ((LinearLayoutManager) recyclerView.getLayoutManager()).findFirstCompletelyVisibleItemPosition() == 0;
+        mode = LOADED; // Mark as loaded so it doesn't try to show a loading spinner at the bottom
+        recyclerView.getAdapter().notifyDataSetChanged();
+        recyclerView.getLayoutManager().scrollToPosition(0);
 
-        recyclerView.getAdapter().notifyItemRangeInserted(0, items.size());
-
-        if (shouldScrollUpwards)
-            recyclerView.getLayoutManager().scrollToPosition(0);
+        testEmpty(true);
     }
 
     // Only supposed to be called when fragment is re-created

@@ -24,7 +24,7 @@ public interface DynastyService {
 
     @Headers({"User-Agent: Oneesama-" + BuildConfig.VERSION_NAME + "-Android"})
     @GET("/series.json")
-    Observable<Map<String, Object>> getAllSeries();
+    Observable<Map<String, Object>> getAllSeries(@Query("page") int page);
 
     @Headers({"User-Agent: Oneesama-" + BuildConfig.VERSION_NAME + "-Android"})
     @GET("/series/{permalink}.json")

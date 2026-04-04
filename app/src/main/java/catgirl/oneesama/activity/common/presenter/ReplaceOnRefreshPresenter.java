@@ -18,14 +18,14 @@ public abstract class ReplaceOnRefreshPresenter<Model, View extends LazyLoadView
                 .subscribe(
                         result -> {
                             items.clear();
-                            items.addAll(0, result);
+                            items.addAll(result);
                             onItemsUpdated();
 
                             newItemsSubscription = null;
 
                             if (getView() != null) {
                                 getView().hideLoadingNewItems();
-                                getView().showExistingItems(items, finished);
+                                getView().showNewItems(items);
                             }
                         }, error -> {
                             if (BuildConfig.DEBUG) {
