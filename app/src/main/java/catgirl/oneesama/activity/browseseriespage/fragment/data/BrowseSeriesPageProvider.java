@@ -23,12 +23,14 @@ public class BrowseSeriesPageProvider {
                             browseSeriesPageJson.cover,
                             browseSeriesPageJson.description);
 
-                    for (BrowseSeriesPageJsonTagging tagging : browseSeriesPageJson.taggings) {
-                        if (tagging.permalink == null) {
-                            seriesPage.objects.add(new BrowseSeriesPageVolume(tagging.header));
-                        } else {
-                            seriesPage.objects.add(new BrowseSeriesPageChapter(
-                                    tagging.title, tagging.permalink, tagging.tags));
+                    if (browseSeriesPageJson.taggings != null) {
+                        for (BrowseSeriesPageJsonTagging tagging : browseSeriesPageJson.taggings) {
+                            if (tagging.permalink == null) {
+                                seriesPage.objects.add(new BrowseSeriesPageVolume(tagging.header));
+                            } else {
+                                seriesPage.objects.add(new BrowseSeriesPageChapter(
+                                        tagging.title, tagging.permalink, tagging.tags));
+                            }
                         }
                     }
 
