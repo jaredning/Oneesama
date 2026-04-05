@@ -142,6 +142,13 @@ public class HistoryFragment
     }
 
     @Override
+    public void post(Runnable runnable) {
+        if (getView() != null) {
+            getView().post(runnable);
+        }
+    }
+
+    @Override
     protected ViewGroup getView(LayoutInflater inflater, ViewGroup container) {
         return (ViewGroup) inflater.inflate(R.layout.fragment_history, container, false);
     }

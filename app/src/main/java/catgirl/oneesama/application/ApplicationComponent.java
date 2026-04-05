@@ -24,6 +24,7 @@ public interface ApplicationComponent {
     RealmProvider getRealmProvider();
     SettingsProvider<StorageSettings> getStorageSettingsProvider();
     SettingsProvider<RecentlyOpenedChapters> getRecentlyOpenedChaptersProvider();
+    catgirl.oneesama.data.network.api.DynastyService getDynastyService();
 
     // Activity scoped subcomponents
     MainActivityComponent plus(MainActivityModule module);

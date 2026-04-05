@@ -7,4 +7,5 @@ public interface MiscChaptersView extends SimpleRecyclerView<ChapterAuthor> {
     void switchToReader(int id);
     void showDeleteConfirmation(int position);
     void showItemDeleted(int position);
+    void post(Runnable runnable);
 }

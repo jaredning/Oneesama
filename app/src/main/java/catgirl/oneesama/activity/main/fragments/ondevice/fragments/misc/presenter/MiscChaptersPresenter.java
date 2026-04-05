@@ -47,10 +47,15 @@ public class MiscChaptersPresenter extends AutoRefreshableRecyclerPresenter<Chap
     }
 
     public void onItemDeletionConfirmed(int position) {
-        chaptersController.deleteChapter(items.get(position).chapter.getId());
-        items.remove(position);
-        if (getView() != null)
-            getView().showItemDeleted(position);
+        chaptersController.deleteChapter(items.get(position).chapter.getId(), () -> {
+            if (getView() != null) {
+                getView().post(() -> {
+                    items.remove(position);
+                    if (getView() != null)
+                        getView().showItemDeleted(position);
+                });
+            }
+        });
         onItemDeletionDismissed();
     }
 

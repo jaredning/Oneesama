@@ -15,4 +15,5 @@ public interface ChapterListView extends SimpleRecyclerView<ChapterAuthor> {
     void showItemDeleted(int position);
     void openUrl(String url);
     void switchToBrowseSeriesPage(String permalink, String name);
+    void post(Runnable runnable);
 }

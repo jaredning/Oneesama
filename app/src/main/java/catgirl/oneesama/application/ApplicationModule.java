@@ -38,6 +38,7 @@ public class ApplicationModule {
     }
 
     @Provides
+    @Singleton
     public DynastyService provideDynastyService() {
         // Hack to make GSON play well with Realm
         // TODO: check if it's still necessary

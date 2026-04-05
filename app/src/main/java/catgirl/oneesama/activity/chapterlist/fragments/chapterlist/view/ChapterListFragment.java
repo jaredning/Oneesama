@@ -216,6 +216,13 @@ public class ChapterListFragment
         startActivity(intent);
     }
 
+    @Override
+    public void post(Runnable runnable) {
+        if (getView() != null) {
+            getView().post(runnable);
+        }
+    }
+
     protected boolean hasStableIds() {
         return true;
     }

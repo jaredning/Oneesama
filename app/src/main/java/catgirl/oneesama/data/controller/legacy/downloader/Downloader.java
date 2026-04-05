@@ -214,7 +214,7 @@ public class Downloader {
 											out.write(buf, 0, len);
 										}
 										success = true;
-									} catch (IOException e) {
+									} catch (Exception e) {
 										e.printStackTrace();
 										success = false;
 									}

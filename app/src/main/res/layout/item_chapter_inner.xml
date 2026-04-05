@@ -15,9 +15,7 @@
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="true"
-            android:background="?attr/selectableItemBackground">
+            android:layout_height="wrap_content">
             <include layout="@layout/item_chapter_common"/>
         </FrameLayout>
 

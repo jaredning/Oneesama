@@ -129,4 +129,11 @@ public class MiscChaptersFragment
     public void showItemDeleted(int position) {
         recyclerView.getAdapter().notifyItemRemoved(position);
     }
+
+    @Override
+    public void post(Runnable runnable) {
+        if (getView() != null) {
+            getView().post(runnable);
+        }
+    }
 }

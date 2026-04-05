@@ -1,16 +1,11 @@
 package catgirl.oneesama.data.controller;
 
-import com.google.gson.ExclusionStrategy;
-import com.google.gson.FieldAttributes;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import catgirl.oneesama.application.Config;
+import catgirl.oneesama.application.Application;
 import catgirl.oneesama.data.network.api.DynastyService;
 import catgirl.oneesama.data.controller.legacy.Book;
 import catgirl.oneesama.data.controller.legacy.BookStateDelegate;
@@ -23,9 +18,6 @@ import catgirl.oneesama.data.network.scraper.chaptername.DynastySeriesPage;
 import catgirl.oneesama.data.network.scraper.chaptername.DynastySeriesPageProvider;
 import io.realm.Realm;
 import io.realm.RealmObject;
-import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava.RxJavaCallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
 import rx.Observable;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -74,28 +66,14 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
 
     // TODO create a data abstraction layer
     public Observable<Book> requestChapterController(final String uri) {
-        // TODO check if the next version of Gson doesn't require this hack to work with RealmObjects
-        Gson gson = new GsonBuilder()
-                .setExclusionStrategies(new ExclusionStrategy() {
-                    @Override
-                    public boolean shouldSkipField(FieldAttributes f) {
-                        return f.getDeclaringClass().equals(RealmObject.class);
-                    }
 
-                    @Override
-                    public boolean shouldSkipClass(Class<?> clazz) {
-                        return false;
-                    }
-                })
-                .create();
+        for (Book book : controllers.values()) {
+            if (book.data.getPermalink().equals(uri)) {
+                return Observable.just(book).observeOn(AndroidSchedulers.mainThread());
+            }
+        }
 
-        Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(Config.apiEndpoint)
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .build();
-
-        DynastyService service = retrofit.create(DynastyService.class);
+        DynastyService service = Application.getApplicationComponent().getDynastyService();
 
         return service.getChapter(uri)
                 .subscribeOn(Schedulers.io())
@@ -113,6 +91,9 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                     }
                 })
                 .map(response -> {
+                    if (controllers.containsKey(response.getId())) {
+                        return controllers.get(response.getId());
+                    }
                     UiChapter chapter = new UiChapter(response);
                     Book book = new Book(chapter, this, this, false, null);
                     controllers.put(response.getId(), book);
@@ -120,7 +101,6 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                     publisher.onNext(chapter);
                     return book;
                 })
-                .doOnNext(response -> controllers.put(response.data.getId(), response))
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
@@ -157,44 +137,58 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
 
     }
 
+    public interface DeletionListener {
+        void onDeletionFinished();
+    }
+
     public void deleteChapter(int id) {
+        deleteChapter(id, null);
+    }
+
+    public void deleteChapter(int id, DeletionListener listener) {
         if(controllers.containsKey(id)) {
             Book book = controllers.get(id);
             book.cancelDownload();
             controllers.remove(id);
         }
-        Realm realm = Realm.getDefaultInstance();
-        try {
-            realm.executeTransaction(r -> {
-                Chapter chapter = r.where(Chapter.class).equalTo("id", id).findFirst();
-                if (chapter != null) {
-                    List<RealmObject> toRemove = new ArrayList<>();
+        
+        // Run on a background thread to avoid UI block and Realm "writes on UI thread" exception
+        new Thread(() -> {
+            Realm realm = Realm.getDefaultInstance();
+            try {
+                realm.executeTransaction(r -> {
+                    Chapter chapter = r.where(Chapter.class).equalTo("id", id).findFirst();
+                    if (chapter != null) {
+                        List<RealmObject> toRemove = new ArrayList<>();
 
-                    // Collect orphaned pages
-                    for (Page page : chapter.getPages())
-                        toRemove.add(page);
+                        // Collect orphaned pages
+                        toRemove.addAll(chapter.getPages());
 
-                    List<Tag> tags = new ArrayList<>();
-                    tags.addAll(chapter.getTags());
+                        List<catgirl.oneesama.data.model.chapter.serializable.Tag> tags = new ArrayList<>(chapter.getTags());
 
-                    chapter.deleteFromRealm();
+                        chapter.deleteFromRealm();
 
-                    // Collect orphaned tags
-                    for (Tag tag : tags) {
-                        if (r.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
-                            toRemove.add(tag);
+                        // Collect orphaned tags
+                        for (catgirl.oneesama.data.model.chapter.serializable.Tag tag : tags) {
+                            if (r.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
+                                toRemove.add(tag);
+                        }
+
+                        // Clean orphaned tags and pages
+                        for (RealmObject object : toRemove)
+                            object.deleteFromRealm();
                     }
+                });
+            } finally {
+                realm.close();
+            }
 
-                    // Clean orphaned tags and pages
-                    for (RealmObject object : toRemove)
-                        object.deleteFromRealm();
-                }
-            });
-        } finally {
-            realm.close();
-        }
+            FileManager.deleteFolder(id);
 
-        FileManager.deleteFolder(id);
+            if (listener != null) {
+                listener.onDeletionFinished();
+            }
+        }).start();
     }
 
     public void checkTagIdsAgainstLocalDatabase(List<Tag> tags) {
@@ -234,22 +228,29 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         }
     }
 
-    public void checkChapterIdAgainstLocalDatabase(Chapter chapter) {
+    public synchronized void checkChapterIdAgainstLocalDatabase(Chapter chapter) {
         // Dynasty API does not have IDs anymore
         // It makes sense, but now we have to assign IDs manually
 
         Realm realm = Realm.getDefaultInstance();
         try {
-            int maxChapterId = 1;
-
-            if (realm.where(Chapter.class).findAll().size() > 0)
-                maxChapterId = realm.where(Chapter.class).max("id").intValue() + 1;
-
             Chapter existing = realm.where(Chapter.class)
                     .equalTo("permalink", chapter.getPermalink())
                     .findFirst();
 
             if (existing == null) {
+                int maxChapterId = 1;
+                Number max = realm.where(Chapter.class).max("id");
+                if (max != null) {
+                    maxChapterId = max.intValue() + 1;
+                }
+                
+                // Extra safety: check if the directory exists on disk even if not in DB
+                while (FileManager.getChapterFolder(maxChapterId, false) != null && 
+                       FileManager.getChapterFolder(maxChapterId, false).exists()) {
+                    maxChapterId++;
+                }
+
                 chapter.setId(maxChapterId);
             } else {
                 chapter.setId(existing.getId());

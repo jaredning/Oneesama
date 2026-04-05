@@ -7,4 +7,5 @@ public interface HistoryView extends SimpleRecyclerView<UiChapter> {
     void switchToReader(int id);
     void showDeleteConfirmation(int position);
     void showItemDeleted(int position);
+    void post(Runnable runnable);
 }
