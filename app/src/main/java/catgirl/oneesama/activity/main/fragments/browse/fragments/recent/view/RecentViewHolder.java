@@ -82,7 +82,7 @@ public class RecentViewHolder extends RecyclerView.ViewHolder {
             }
         }
 
-        statusDelegate.bind(chapter.chapter);
+        statusDelegate.bind(chapter.chapter, chapter.permalink);
     }
 
     public interface RecentViewHolderDelegate {

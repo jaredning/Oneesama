@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import java.io.IOException;
@@ -84,6 +86,7 @@ public class Book implements BookDownloaderDelegate {
 	public Book(UiChapter chapter, CacherDelegate delegate, BookStateDelegate bsDelegate, boolean isUpdater, Date modifiedSince)
 	{
 		this.data = chapter;
+		this.delegate = new WeakReference<CacherDelegate>(delegate);
 
 		addBookStateDelegate(bsDelegate);
 
@@ -104,12 +107,40 @@ public class Book implements BookDownloaderDelegate {
 			pg.page = p;
 
 			bookPages.add(pg);
-
-			// This mystery piece of code tries to set proper page sizes for the photo album
-			// Basically it should match the background image dimensions, not "book size" parameter
-			// If you don't have the file yet - use the delegate when downloading
-			fixPageForAlbum(i);
 		}
+
+		// Asynchronously fix page sizes and check for existing files to avoid blocking UI thread
+		new Thread(() -> {
+			if (!isUpdater) {
+				int downloaded = 0;
+				for (int i = 0; i < data.getPages().size(); i++) {
+					if (FileManager.fileExists(data.getId(), data.getPages().get(i))) {
+						downloaded++;
+						bookPages.get(i).page.isDownloading = false;
+					}
+				}
+				final int finalDownloaded = downloaded;
+				new Handler(Looper.getMainLooper()).post(() -> {
+					pagesDownloaded = finalDownloaded;
+					if (getNextDownload() < 0)
+						completelyDownloaded = true;
+					CacherDelegate d = this.delegate.get();
+					if (d != null)
+						d.onCacheUpdated();
+				});
+			}
+
+			for (int i = 0; i < bookPages.size(); i++) {
+				if (fixPageForAlbum(i)) {
+					final int index = i;
+					new Handler(Looper.getMainLooper()).post(() -> {
+						CacherDelegate d = this.delegate.get();
+						if (d != null)
+							d.onPageDimensionsChanged(index);
+					});
+				}
+			}
+		}).start();
 
 		cacheQueue = new ArrayList<CacheQueueItem>();
 
@@ -117,24 +148,6 @@ public class Book implements BookDownloaderDelegate {
 		downloader.continueOnFailure = false;
 
 		this.modifiedSince = modifiedSince;
-
-		this.delegate = new WeakReference<CacherDelegate>(delegate);
-
-		// Calculate the amount of downloaded pages
-		if(!isUpdater)
-		{
-			for(int i = 0; i < data.getPages().size(); i++)
-			{
-				if(FileManager.fileExists(data.getId(), data.getPages().get(i)))
-				{
-					pagesDownloaded++;
-					bookPages.get(i).page.isDownloading = false;
-				}
-			}
-		}
-
-		if(getNextDownload() < 0)
-			completelyDownloaded = true;
 
 		totalFiles = bookPages.size();
 	}
@@ -150,29 +163,24 @@ public class Book implements BookDownloaderDelegate {
 			if(istr == null)
 				return false;
 
-			self.currentOptions=new BitmapFactory.Options();
-			self.currentOptions.inJustDecodeBounds = true;
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
 
-			BitmapFactory.decodeStream(istr, null, self.currentOptions);
+			BitmapFactory.decodeStream(istr, null, options);
 
-			int newWidth = self.currentOptions.outWidth;
-			int newHeight = self.currentOptions.outHeight;
+			int newWidth = options.outWidth;
+			int newHeight = options.outHeight;
 
-			float xFactor = 1;
-			float yFactor = 1;
-
-			float xStretch = (float) newWidth / (float) page.defaultWidth;
-			float yStretch = (float) newHeight / (float) page.defaultHeight;
-
-			if(xStretch > yStretch)
-				yFactor = (float) (page.defaultHeight * xStretch) / (float) newHeight;
-			else
-				xFactor = (float) (page.defaultWidth * yStretch) / (float) newWidth;
-
-			page.defaultWidth = self.currentOptions.outWidth;
-			page.defaultHeight = self.currentOptions.outHeight;
+			page.defaultWidth = newWidth;
+			page.defaultHeight = newHeight;
 
 			Log.v("Album", "" + page.defaultWidth + " " + page.defaultHeight);
+
+			try {
+				istr.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 
 			return true;
 	}
@@ -208,7 +216,16 @@ public class Book implements BookDownloaderDelegate {
 	}
 
 	public synchronized void removeBookStateDelegate(BookStateDelegate delegate) {
-		bsDelegates.remove(delegate);
+		WeakReference<BookStateDelegate> toDelete = null;
+		for (WeakReference<BookStateDelegate> d : bsDelegates) {
+			if (d.get() == delegate) {
+				toDelete = d;
+				break;
+			}
+		}
+		if (toDelete != null) {
+			bsDelegates.remove(toDelete);
+		}
 	}
 
 	public synchronized void delegateOnPageDownloaded(int id, boolean bookDownloaded, int pageId, boolean onlyProgress)
@@ -261,7 +278,8 @@ public class Book implements BookDownloaderDelegate {
 	}
 
 	public boolean shouldDownload(int pageToCheck) {
-		return (!downloadedFiles.contains(pageToCheck) && (!downloadFailures.containsKey(pageToCheck) || downloadFailures.get(pageToCheck) < MAXFAILURES) && !FileManager.fileExists(data.getId(), data.getPages().get(pageToCheck)) && !pagesBeingDownloaded.contains(pageToCheck));
+		Integer failures = downloadFailures.get(pageToCheck);
+		return (!downloadedFiles.contains(pageToCheck) && (failures == null || failures < MAXFAILURES) && !FileManager.fileExists(data.getId(), data.getPages().get(pageToCheck)) && !pagesBeingDownloaded.contains(pageToCheck));
 	}
 
 	public int getNextDownload()
@@ -655,13 +673,15 @@ public class Book implements BookDownloaderDelegate {
 	@Override
 	public synchronized void onDownloadFailed(int id, boolean i, boolean p) {
 //		pages.get(rd.pageId).isDownloading = false;
-		if(!downloadFailures.containsKey(id))
-			downloadFailures.put(id, 1);
+		Integer failures = downloadFailures.get(id);
+		if(failures == null)
+			failures = 1;
 		else
-			downloadFailures.put(id, downloadFailures.get(id) + 1);
+			failures++;
+		downloadFailures.put(id, failures);
 		pagesBeingDownloaded.remove(id);
 
-		if(!downloadFailures.containsKey(id) || downloadFailures.get(id) < MAXFAILURES)
+		if(failures < MAXFAILURES)
 		{
 			if(isDownloading)
 			{

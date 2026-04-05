@@ -21,6 +21,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import catgirl.oneesama.application.Application;
 import catgirl.oneesama.application.Config;
@@ -47,8 +49,10 @@ public class Downloader {
 	
 	public boolean continueOnFailure = true;
 	
-	public HashSet<Integer> ids = new HashSet<Integer>();
+		public HashSet<Integer> ids = new HashSet<Integer>();
 	
+	private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+
 	boolean paused = false;
 
 	int bookId;
@@ -109,7 +113,7 @@ public class Downloader {
 	{
 		isCancelled = false;
 		// The download thread
-		new Thread(new Runnable() {
+		executor.execute(new Runnable() {
 			public void run()
 			{
 				int id = 0;
@@ -169,14 +173,19 @@ public class Downloader {
 						OutputStream output = null;
 						output = new FileOutputStream(src);
 
-						byte data[] = new byte[100 * 1024];
+						byte data[] = new byte[16 * 1024];
 						long total = 0;
 						int count;
+						long lastUpdate = 0;
 						while ((count = input.input.read(data)) != -1) {
 							total += count;
-							if(delegate != null)
+							if(delegate != null && input.length > 0)
 							{
-								delegate.onDownloadProgress(pageId, (float) total / (float) input.length);
+								long now = System.currentTimeMillis();
+								if (now - lastUpdate > 100 || total == input.length) {
+									delegate.onDownloadProgress(pageId, (float) total / (float) input.length);
+									lastUpdate = now;
+								}
 							}
 							output.write(data, 0, count);
 						}
@@ -199,7 +208,7 @@ public class Downloader {
 								if (file != null) {
 									try (InputStream in = new FileInputStream(src);
 										 OutputStream out = Application.getContextOfApplication().getContentResolver().openOutputStream(file.getUri())) {
-										byte[] buf = new byte[1024];
+										byte[] buf = new byte[16 * 1024];
 										int len;
 										while ((len = in.read(buf)) > 0) {
 											out.write(buf, 0, len);
@@ -266,8 +275,8 @@ public class Downloader {
 				return;
 
 			}
-			
-		}).start();
+
+		});
 	}
 
 	public void cancel() {
@@ -287,8 +296,6 @@ public class Downloader {
 		URL url = null;
 
 		url = new URL(inurl);
-
-		System.setProperty("http.keepAlive", "false");
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 

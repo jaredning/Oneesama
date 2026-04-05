@@ -34,7 +34,7 @@ public class BrowseSeriesPageChapterViewHolder extends RecyclerView.ViewHolder {
     public void bind(BrowseSeriesPageChapter chapter, ViewHolderDelegate delegate) {
         this.delegate = delegate;
         title.setText(chapter.title);
-        statusDelegate.bind(chapter.chapter);
+        statusDelegate.bind(chapter.chapter, chapter.permalink);
     }
 
     public interface ViewHolderDelegate {

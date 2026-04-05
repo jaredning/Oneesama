@@ -51,17 +51,20 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
             return controllers.get(id);
         else {
             Realm realm = Realm.getDefaultInstance();
-            Chapter chapter = realm.where(Chapter.class).equalTo("id", id).findFirst();
-            if(chapter == null)
-                return null;
+            try {
+                Chapter chapter = realm.where(Chapter.class).equalTo("id", id).findFirst();
+                if (chapter == null)
+                    return null;
 
-            UiChapter uiChapter = new UiChapter(chapter);
-            Book book = new Book(uiChapter, this, this, false, null);
-            realm.close();
-            book.startDownload();
-            controllers.put(id, book);
-            publisher.onNext(uiChapter);
-            return book;
+                UiChapter uiChapter = new UiChapter(chapter);
+                Book book = new Book(uiChapter, this, this, false, null);
+                book.startDownload();
+                controllers.put(id, book);
+                publisher.onNext(uiChapter);
+                return book;
+            } finally {
+                realm.close();
+            }
         }
     }
 
@@ -101,10 +104,13 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                 .doOnNext(this::findRealChapterName)
                 .doOnNext(response -> {
                     Realm realm = Realm.getDefaultInstance();
-                    realm.beginTransaction();
-                    realm.copyToRealmOrUpdate(response);
-                    realm.commitTransaction();
-                    realm.close();
+                    try {
+                        realm.beginTransaction();
+                        realm.copyToRealmOrUpdate(response);
+                        realm.commitTransaction();
+                    } finally {
+                        realm.close();
+                    }
                 })
                 .map(response -> {
                     UiChapter chapter = new UiChapter(response);
@@ -127,12 +133,17 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
     public void completelyDownloaded(int id, boolean success) {
         if(success) {
             Realm realm = Realm.getDefaultInstance();
-            Chapter chapter = realm.where(Chapter.class).equalTo("id", id).findFirst();
-            realm.beginTransaction();
-            chapter.setCompletelyDownloaded(true);
-            realm.copyToRealmOrUpdate(chapter);
-            realm.commitTransaction();
-            realm.close();
+            try {
+                Chapter chapter = realm.where(Chapter.class).equalTo("id", id).findFirst();
+                if (chapter != null) {
+                    realm.beginTransaction();
+                    chapter.setCompletelyDownloaded(true);
+                    realm.copyToRealmOrUpdate(chapter);
+                    realm.commitTransaction();
+                }
+            } finally {
+                realm.close();
+            }
         }
     }
 
@@ -153,32 +164,35 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
             controllers.remove(id);
         }
         Realm realm = Realm.getDefaultInstance();
-        Chapter chapter = realm.where(Chapter.class).equalTo("id", id).findFirst();
-        realm.beginTransaction();
+        try {
+            realm.executeTransaction(r -> {
+                Chapter chapter = r.where(Chapter.class).equalTo("id", id).findFirst();
+                if (chapter != null) {
+                    List<RealmObject> toRemove = new ArrayList<>();
 
-        List<RealmObject> toRemove = new ArrayList<>();
+                    // Collect orphaned pages
+                    for (Page page : chapter.getPages())
+                        toRemove.add(page);
 
-        // Collect orphaned pages
-        for(Page page : chapter.getPages())
-            toRemove.add(page);
+                    List<Tag> tags = new ArrayList<>();
+                    tags.addAll(chapter.getTags());
 
-        List<Tag> tags = new ArrayList<>();
-        tags.addAll(chapter.getTags());
+                    chapter.deleteFromRealm();
 
-        chapter.deleteFromRealm();
+                    // Collect orphaned tags
+                    for (Tag tag : tags) {
+                        if (r.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
+                            toRemove.add(tag);
+                    }
 
-        // Collect orphaned tags
-        for(Tag tag : tags) {
-            if(realm.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
-                toRemove.add(tag);
+                    // Clean orphaned tags and pages
+                    for (RealmObject object : toRemove)
+                        object.deleteFromRealm();
+                }
+            });
+        } finally {
+            realm.close();
         }
-
-        // Clean orphaned tags and pages
-        for(RealmObject object : toRemove)
-            object.deleteFromRealm();
-
-        realm.commitTransaction();
-        realm.close();
 
         FileManager.deleteFolder(id);
     }
@@ -191,28 +205,32 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         String permalink;
 
         Realm realm = Realm.getDefaultInstance();
-        int maxTagId = 1;
+        try {
+            int maxTagId = 1;
 
-        if(realm.where(Tag.class).findAll().size() > 0)
-            maxTagId = realm.where(Tag.class).max("id").intValue() + 1;
+            if (realm.where(Tag.class).findAll().size() > 0)
+                maxTagId = realm.where(Tag.class).max("id").intValue() + 1;
 
-        for(Tag tag : tags) {
-            name = tag.getName();
-            type = tag.getType();
-            permalink = tag.getPermalink();
+            for (Tag tag : tags) {
+                name = tag.getName();
+                type = tag.getType();
+                permalink = tag.getPermalink();
 
-            Tag existing = realm.where(Tag.class)
-                    .equalTo("name", name)
-                    .equalTo("type", type)
-                    .equalTo("permalink", permalink)
-                    .findFirst();
+                Tag existing = realm.where(Tag.class)
+                        .equalTo("name", name)
+                        .equalTo("type", type)
+                        .equalTo("permalink", permalink)
+                        .findFirst();
 
-            if (existing == null) {
-                tag.setId(maxTagId);
-                maxTagId++;
-            } else {
-                tag.setId(existing.getId());
+                if (existing == null) {
+                    tag.setId(maxTagId);
+                    maxTagId++;
+                } else {
+                    tag.setId(existing.getId());
+                }
             }
+        } finally {
+            realm.close();
         }
     }
 
@@ -221,19 +239,23 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         // It makes sense, but now we have to assign IDs manually
 
         Realm realm = Realm.getDefaultInstance();
-        int maxChapterId = 1;
+        try {
+            int maxChapterId = 1;
 
-        if(realm.where(Chapter.class).findAll().size() > 0)
+            if (realm.where(Chapter.class).findAll().size() > 0)
                 maxChapterId = realm.where(Chapter.class).max("id").intValue() + 1;
 
-        Chapter existing = realm.where(Chapter.class)
-                .equalTo("permalink", chapter.getPermalink())
-                .findFirst();
+            Chapter existing = realm.where(Chapter.class)
+                    .equalTo("permalink", chapter.getPermalink())
+                    .findFirst();
 
-        if (existing == null) {
-            chapter.setId(maxChapterId);
-        } else {
-            chapter.setId(existing.getId());
+            if (existing == null) {
+                chapter.setId(maxChapterId);
+            } else {
+                chapter.setId(existing.getId());
+            }
+        } finally {
+            realm.close();
         }
     }
 

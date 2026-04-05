@@ -29,7 +29,9 @@ public class InterfaceManager {
 	
 	private TextView pageLabel;
 	TextView bookTitle;
-	
+	ProgressBar progressBar;
+	View downloadProgressLayout;
+
 	public InterfaceManager self = this;
 	
 	public InterfaceManager(ReaderActivity activity, Book book) {
@@ -54,6 +56,9 @@ public class InterfaceManager {
 
 		activity.findViewById(R.id.BookTitleLayout).bringToFront();
 		
+		progressBar = (ProgressBar) activity.findViewById(R.id.downloadProgress);
+		downloadProgressLayout = activity.findViewById(R.id.DownloadProgressLayout);
+
 		updateProgress();
 		
 		h.postDelayed(r, 10000);
@@ -71,11 +76,12 @@ public class InterfaceManager {
 			activity.findViewById(R.id.InterfaceBottomBar).clearAnimation();
 			activity.findViewById(R.id.InterfaceBottomBar).setVisibility(View.VISIBLE);
 			
-			activity.findViewById(R.id.DownloadProgressLayout).clearAnimation();
-    		if(book.completelyDownloaded && !(activity.updateBook != null && !activity.updateBook.completelyDownloaded))
-    			activity.findViewById(R.id.DownloadProgressLayout).setVisibility(View.GONE);
-    		else
-	    		activity.findViewById(R.id.DownloadProgressLayout).setVisibility(View.VISIBLE);
+			if (downloadProgressLayout != null) {
+				if(book.completelyDownloaded && !(activity.updateBook != null && !activity.updateBook.completelyDownloaded))
+					downloadProgressLayout.setVisibility(View.GONE);
+				else
+					downloadProgressLayout.setVisibility(View.VISIBLE);
+			}
 		    
     		activity.findViewById(R.id.BookTitleLayout).bringToFront();
 //    		MApplication.interfaceActive = true;
@@ -245,7 +251,7 @@ public class InterfaceManager {
 
 			@Override
 			public void run() {
-				if(activity.findViewById(R.id.DownloadProgressLayout).getVisibility() == View.VISIBLE && !interfaceAnimating)
+				if(downloadProgressLayout != null && downloadProgressLayout.getVisibility() == View.VISIBLE && !interfaceAnimating)
 				{
 					activity.findViewById(R.id.BookTitleLayout).bringToFront();
 					interfaceAnimating = true;
@@ -254,8 +260,10 @@ public class InterfaceManager {
 					dlout.setAnimationListener(new AnimationListener() {
 				    	@Override
 				    	public void onAnimationEnd(Animation animation) {
-				    		activity.findViewById(R.id.DownloadProgressLayout).clearAnimation();
-				    		activity.findViewById(R.id.DownloadProgressLayout).setVisibility(View.GONE);
+				    		if (downloadProgressLayout != null) {
+								downloadProgressLayout.clearAnimation();
+								downloadProgressLayout.setVisibility(View.GONE);
+							}
 				    		interfaceAnimating = false;
 				    	}
 				    	@Override
@@ -263,7 +271,7 @@ public class InterfaceManager {
 				    	@Override
 				    	public void onAnimationStart(Animation animation) {}
 				    });
-					activity.findViewById(R.id.DownloadProgressLayout).startAnimation(dlout);
+					downloadProgressLayout.startAnimation(dlout);
 				}
 			}
 		});
@@ -271,23 +279,19 @@ public class InterfaceManager {
 	
 	public void updateProgress()
 	{
-		ProgressBar progress = (ProgressBar) activity.findViewById(R.id.downloadProgress);
-		if(progress != null)
+		if(progressBar != null)
 		{
 			if(activity.updateBook != null)
 			{
-				progress.setMax(activity.updateBook.totalFiles);
-				progress.setProgress(activity.updateBook.pagesDownloaded);
-				Log.v("FixUpdate", "Progress update");
+				progressBar.setMax(activity.updateBook.totalFiles);
+				progressBar.setProgress(activity.updateBook.pagesDownloaded);
 			}
 			else
 			{
-				progress.setMax(book.totalFiles);
-				progress.setProgress(book.pagesDownloaded);
-				Log.v("FixUpdate", "Progress normal");
+				progressBar.setMax(book.totalFiles);
+				progressBar.setProgress(book.pagesDownloaded);
 			}
 		}
-		Log.v("FixUpdate", "Progress bar: " + progress.getProgress() + "/" + progress.getMax());
 	}
 	
 	public void updateLabel(int pageId)
@@ -299,7 +303,7 @@ public class InterfaceManager {
 	}
 
 	public void showDownloadBar() {
-		if(activity.findViewById(R.id.DownloadProgressLayout).getVisibility() != View.VISIBLE && !interfaceAnimating)
+		if(downloadProgressLayout != null && downloadProgressLayout.getVisibility() != View.VISIBLE && !interfaceAnimating)
 		{
 			activity.findViewById(R.id.BookTitleLayout).bringToFront();
 			interfaceAnimating = true;
@@ -308,7 +312,9 @@ public class InterfaceManager {
 			dlin.setAnimationListener(new AnimationListener() {
 		    	@Override
 		    	public void onAnimationEnd(Animation animation) {
-		    		activity.findViewById(R.id.DownloadProgressLayout).clearAnimation();
+		    		if (downloadProgressLayout != null) {
+						downloadProgressLayout.clearAnimation();
+					}
 		    		interfaceAnimating = false;
 		    	}
 		    	@Override
@@ -317,8 +323,8 @@ public class InterfaceManager {
 		    	public void onAnimationStart(Animation animation) {}
 		    });
 
-    		activity.findViewById(R.id.DownloadProgressLayout).setVisibility(View.VISIBLE);
-			activity.findViewById(R.id.DownloadProgressLayout).startAnimation(dlin);
+    		downloadProgressLayout.setVisibility(View.VISIBLE);
+			downloadProgressLayout.startAnimation(dlin);
 		}
 	}
 

@@ -39,6 +39,7 @@ public class ChapterViewHolderStatusDelegate implements BookStateDelegate {
     Handler handler = new Handler();
     Book controller;
     UiChapter chapter;
+    String permalink;
 
     /**
      *
@@ -53,12 +54,24 @@ public class ChapterViewHolderStatusDelegate implements BookStateDelegate {
         progressBar.stopSpinning();
         progressBG.stopSpinning();
         progressBG.setInstantProgress(1f);
+
+        reloadLayout.setOnClickListener(v -> {
+            String p = chapter != null ? chapter.getPermalink() : permalink;
+            if (p != null) {
+                chaptersController.requestChapterController(p).subscribe(book -> {}, throwable -> {});
+            }
+        });
     }
 
     public void bind(UiChapter chapter) {
-        this.chapter = chapter;
+        bind(chapter, chapter != null ? chapter.getPermalink() : null);
+    }
 
-        if (chapter == null) {
+    public void bind(UiChapter chapter, String permalink) {
+        this.chapter = chapter;
+        this.permalink = permalink;
+
+        if (chapter == null && permalink == null) {
             hide();
             return;
         }
@@ -69,6 +82,11 @@ public class ChapterViewHolderStatusDelegate implements BookStateDelegate {
             subscription = null;
         }
 
+        if (controller != null) {
+            controller.removeBookStateDelegate(this);
+            controller = null;
+        }
+
         statusLayout.setVisibility(View.VISIBLE);
 
         // TODO: don't even get me started on how terrible this is
@@ -76,7 +94,7 @@ public class ChapterViewHolderStatusDelegate implements BookStateDelegate {
         reloadLayout.setVisibility(View.GONE);
         downloadedLayout.setVisibility(View.GONE);
 
-        if(chaptersController.isChapterControllerActive(chapter.getId())) {
+        if(chapter != null && chaptersController.isChapterControllerActive(chapter.getId())) {
             controller = chaptersController.getChapterController(chapter.getId());
             if(controller.completelyDownloaded) {
                 downloadedLayout.setVisibility(View.VISIBLE);
@@ -87,16 +105,29 @@ public class ChapterViewHolderStatusDelegate implements BookStateDelegate {
                 progressBar.setInstantProgress((float) controller.pagesDownloaded / (float) controller.totalFiles);
             }
             controller.addBookStateDelegate(this);
-        } else {
+        } else if (chapter != null) {
             subscription = chaptersController.subscribeForChapterControllerActivation()
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(activatedChapter -> {
-                        bind(this.chapter);
+                        if (this.chapter != null && activatedChapter.getId().equals(this.chapter.getId())) {
+                            bind(this.chapter, this.permalink);
+                        }
                     });
             compositeSubscription.add(subscription);
             boolean isDownloaded = chapter.isCompletelyDownloaded();
             downloadedLayout.setVisibility(isDownloaded ? View.VISIBLE : View.GONE);
             reloadLayout.setVisibility(isDownloaded ? View.GONE : View.VISIBLE);
+        } else {
+            // Chapter is null but permalink is not. Show download button.
+            reloadLayout.setVisibility(View.VISIBLE);
+            subscription = chaptersController.subscribeForChapterControllerActivation()
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(activatedChapter -> {
+                        if (activatedChapter.getPermalink().equals(this.permalink)) {
+                            bind(null, this.permalink);
+                        }
+                    });
+            compositeSubscription.add(subscription);
         }
     }
 

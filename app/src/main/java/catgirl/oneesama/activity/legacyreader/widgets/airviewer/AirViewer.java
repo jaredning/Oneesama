@@ -958,7 +958,6 @@ public class AirViewer implements AirPageDelegate {
 	
 	public void updatePositionDelegate()
 	{
-		Log.v("Derp", "Update thing");
     	if(delegate != null)
 			delegate.onPagePositionChanged(currentPage.zoom <= currentPage.getMinZoom(width, height, isLandscape) * 1.05f ? 0 : currentPage.zoom, currentPage.x, currentPage.y, -1);
 	}
