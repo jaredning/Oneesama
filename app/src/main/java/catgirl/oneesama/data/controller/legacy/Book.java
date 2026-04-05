@@ -111,6 +111,7 @@ public class Book implements BookDownloaderDelegate {
 
 		// Asynchronously fix page sizes and check for existing files to avoid blocking UI thread
 		new Thread(() -> {
+			FileManager.precacheChapter(Application.getContextOfApplication(), data.getId());
 			if (!isUpdater) {
 				int downloaded = 0;
 				for (int i = 0; i < data.getPages().size(); i++) {
@@ -467,7 +468,7 @@ public class Book implements BookDownloaderDelegate {
 					if(item.state == CacheState.LOW)
 					{
 						self.currentOptions=new BitmapFactory.Options();
-						self.currentOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
+						self.currentOptions.inPreferredConfig = Bitmap.Config.RGB_565;
 						self.currentOptions.inJustDecodeBounds = true;
 
 						BitmapFactory.decodeByteArray(a.array, 0, a.count, self.currentOptions);
@@ -490,7 +491,7 @@ public class Book implements BookDownloaderDelegate {
 						self.currentOptions.inSampleSize = 1;
 
 						self.currentOptions=new BitmapFactory.Options();
-						self.currentOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
+						self.currentOptions.inPreferredConfig = Bitmap.Config.RGB_565;
 						self.currentOptions.inJustDecodeBounds = false;
 
 

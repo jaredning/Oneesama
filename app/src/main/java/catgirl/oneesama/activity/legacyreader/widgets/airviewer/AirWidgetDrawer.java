@@ -21,6 +21,8 @@ import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.util.Map;
+
 import com.nineoldandroids.view.ViewHelper;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
@@ -59,6 +61,18 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
 	ImageView[] bgs		= new ImageView[3];
 
 	Handler handler = new Handler();
+	private final Matrix mMatrix = new Matrix();
+	private final Map<Integer, Bitmap> colorCache = new java.util.HashMap<>();
+
+	private Bitmap getColorBitmap(int color) {
+		Bitmap b = colorCache.get(color);
+		if (b == null) {
+			b = Bitmap.createBitmap(1, 1, Config.RGB_565);
+			b.setPixel(0, 0, color);
+			colorCache.put(color, b);
+		}
+		return b;
+	}
 	
 	public AirWidgetDrawer(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
@@ -106,58 +120,55 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
             	Log.e("Air", "Size change failed");
             	return;
             }
-            
-            this.removeAllViews();
-            
+
             width = xNew;
             height = yNew;
-            
-            LayoutParams p = new LayoutParams(LayoutParams.MATCH_PARENT,
-                    LayoutParams.MATCH_PARENT);
-            
-            bli = new ImageView(context);
-            bli.setScaleType(ScaleType.MATRIX);
-            bli.setLayoutParams(p);
-            
-            bci = new ImageView(context);
-            bci.setScaleType(ScaleType.MATRIX);
-            bci.setLayoutParams(p);
-            
-            bri = new ImageView(context);
-            bri.setScaleType(ScaleType.MATRIX);
-            bri.setLayoutParams(p);
-            
-            self.addView(bli);
-            self.addView(bri);
-            self.addView(bci);
-            
-            li = new ImageView(context);
-            li.setScaleType(ScaleType.MATRIX);
-            li.setLayoutParams(p);
-            
-            ci = new ImageView(context);
-            ci.setScaleType(ScaleType.MATRIX);
-            ci.setLayoutParams(p);
-            
-            ri = new ImageView(context);
-            ri.setScaleType(ScaleType.MATRIX);
-            ri.setLayoutParams(p);
-            
-            self.addView(li);
-            self.addView(ri);
-            self.addView(ci);
 
-            dli = newDownloadingLayout();
-            dci = newDownloadingLayout();
-			dri = newDownloadingLayout();
+            if (li == null) {
+                LayoutParams p = new LayoutParams(LayoutParams.MATCH_PARENT,
+                        LayoutParams.MATCH_PARENT);
+                li = new ImageView(context);
+                li.setScaleType(ScaleType.MATRIX);
+                li.setLayoutParams(p);
 
-		self.addView(dli);
-            self.addView(dri);
-            self.addView(dci);
-            
-    		views[0]   = ci; 		views[1]  = li; 		views[2]  = ri;
-    		dls[0]     = dci;		dls[1]    = dli;		dls[2]    = dri;
-    		bgs[0]     = bci;		bgs[1]    = bli;		bgs[2]    = bri;
+                ci = new ImageView(context);
+                ci.setScaleType(ScaleType.MATRIX);
+                ci.setLayoutParams(p);
+
+                ri = new ImageView(context);
+                ri.setScaleType(ScaleType.MATRIX);
+                ri.setLayoutParams(p);
+
+                bli = new ImageView(context);
+                bli.setScaleType(ScaleType.MATRIX);
+                bli.setLayoutParams(p);
+
+                bci = new ImageView(context);
+                bci.setScaleType(ScaleType.MATRIX);
+                bci.setLayoutParams(p);
+
+                bri = new ImageView(context);
+                bri.setScaleType(ScaleType.MATRIX);
+                bri.setLayoutParams(p);
+
+                dli = newDownloadingLayout();
+                dci = newDownloadingLayout();
+                dri = newDownloadingLayout();
+
+                self.addView(bli);
+                self.addView(bri);
+                self.addView(bci);
+                self.addView(li);
+                self.addView(ri);
+                self.addView(ci);
+                self.addView(dli);
+                self.addView(dri);
+                self.addView(dci);
+
+                views[0]   = ci; 		views[1]  = li; 		views[2]  = ri;
+                dls[0]     = dci;		dls[1]    = dli;		dls[2]    = dri;
+                bgs[0]     = bci;		bgs[1]    = bli;		bgs[2]    = bri;
+            }
     		
             if(delegate != null)
             	delegate.onCanvasInitialized();
@@ -246,9 +257,7 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
 				if(np != null)
 				{
 					// Set background color
-					Bitmap bgb = Bitmap.createBitmap(1, 1, Config.RGB_565);
-					bgb.setPixel(0, 0, np.bgcolor);
-					bg.setImageBitmap(bgb);
+					bg.setImageBitmap(getColorBitmap(np.bgcolor));
 					bg.clearAnimation();
 					if(useBackground)
 						bg.setVisibility(View.VISIBLE);
@@ -330,8 +339,6 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
                     airs[1] = left;
                     airs[2] = right;
 
-                    Matrix m;
-
                     for (int i = 0; i < airs.length; i++) {
                         AirPage ap = airs[i];
                         ImageView vi = views[i];
@@ -361,44 +368,41 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
                         try {
                             // Set the translation matrix for the image based on corresponding AirPage.
                             if (ap != null) {
-                                m = new Matrix();
+                                mMatrix.reset();
                                 int xm = 0, ym = 0;
                                 if (vi.getDrawable() != null) {
                                     Drawable bitmap = (vi.getDrawable());//.getBitmap();
                                     if (bitmap != null) {
                                         float scale = Math.min(ap.getWidth() / (float) bitmap.getIntrinsicWidth(), ap.getHeight() / (float) bitmap.getIntrinsicHeight());
-                                        m.setScale(scale, scale);
+                                        mMatrix.setScale(scale, scale);
                                         if (Math.abs(ap.getWidth() / 2f - bitmap.getIntrinsicWidth() * scale / 2f) > 1)
                                             xm = (int) (ap.getWidth() / 2f - bitmap.getIntrinsicWidth() * scale / 2f);
                                         if (Math.abs(ap.getHeight() / 2f - bitmap.getIntrinsicHeight() * scale / 2f) > 1)
                                             ym = (int) (ap.getHeight() / 2f - bitmap.getIntrinsicHeight() * scale / 2f);
-                                        m.postTranslate((int) ap.x + xm, (int) ap.y + ym);
+                                        mMatrix.postTranslate((int) ap.x + xm, (int) ap.y + ym);
                                     }
                                     if (bitmap == none) {
-                                        m.setScale(((float) ap.defaultWidth / (float) bitmap.getIntrinsicWidth()) * ap.zoom, ((float) ap.defaultHeight / (float) bitmap.getIntrinsicHeight()) * ap.zoom);
-                                        m.postTranslate(ap.x, ap.y);
+                                        mMatrix.setScale(((float) ap.defaultWidth / (float) bitmap.getIntrinsicWidth()) * ap.zoom, ((float) ap.defaultHeight / (float) bitmap.getIntrinsicHeight()) * ap.zoom);
+                                        mMatrix.postTranslate(ap.x, ap.y);
                                     }
-                                    vi.setImageMatrix(m);
-                                    if (ap.hasAlpha)
-                                        ViewHelper.setAlpha(vi, 1f);
-                                    else
-                                        ViewHelper.setAlpha(vi, 1f);
+                                    vi.setImageMatrix(mMatrix);
+                                    vi.setAlpha(1f);
                                 }
 
                                 if (xm == 0 && ym == 0) {
                                     bg.clearAnimation();
                                     bg.setVisibility(View.GONE);
                                 } else if (useBackground) {
-                                    m = new Matrix();
-                                    m.setScale(ap.getWidth(), ap.getHeight());
-                                    m.postTranslate((int) ap.x, (int) ap.y);
-                                    bg.setImageMatrix(m);
+                                    mMatrix.reset();
+                                    mMatrix.setScale(ap.getWidth(), ap.getHeight());
+                                    mMatrix.postTranslate((int) ap.x, (int) ap.y);
+                                    bg.setImageMatrix(mMatrix);
                                     bg.clearAnimation();
                                     bg.setVisibility(View.VISIBLE);
                                     if (ap.hasAlpha)
-                                        ViewHelper.setAlpha(bg, ap.alpha);
+                                        bg.setAlpha(ap.alpha);
                                     else
-                                        ViewHelper.setAlpha(bg, 1f);
+                                        bg.setAlpha(1f);
                                 }
                             }
                             if (ap == null) {
@@ -415,14 +419,14 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
 									di.clearAnimation();
                                     di.bringToFront();
                                     if (di.getWidth() > 0) {
-                                        ViewHelper.setTranslationX(di, ap.x + (ap.getWidth()) / 2f - di.getWidth() / 2f);
-                                        ViewHelper.setTranslationY(di, ap.y + (ap.getHeight()) / 2f - di.getHeight() / 2f);
+                                        di.setTranslationX(ap.x + (ap.getWidth()) / 2f - di.getWidth() / 2f);
+                                        di.setTranslationY(ap.y + (ap.getHeight()) / 2f - di.getHeight() / 2f);
                                     }
 
                                     if (ap.hasAlpha)
-                                        ViewHelper.setAlpha(di, ap.alpha);
+                                        di.setAlpha(ap.alpha);
                                     else
-                                        ViewHelper.setAlpha(di, 1f);
+                                        di.setAlpha(1f);
                                 } else {
                                     di.setVisibility(View.GONE);
 									di.clearAnimation();
@@ -434,7 +438,6 @@ public class AirWidgetDrawer extends FrameLayout implements AirViewerDrawDelegat
                     }
 
                     self.invalidate();
-                    self.requestLayout();
                 }
             });
 	}

@@ -226,6 +226,7 @@ public class ActivityUtils {
 		BitmapFactory.decodeByteArray(a.array, 0, a.count, onlySize);
 
 		BitmapFactory.Options opts = new BitmapFactory.Options();
+		opts.inPreferredConfig = Bitmap.Config.RGB_565;
 		opts.inDither = true;
 
 		BitmapRegionDecoder brd = null;

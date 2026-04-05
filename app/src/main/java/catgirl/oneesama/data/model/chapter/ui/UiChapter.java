@@ -38,21 +38,15 @@ public class UiChapter {
         this.longTitle = chapter.getLongTitle();
         this.permalink = chapter.getPermalink();
 
-        Observable.from(chapter.getTags())
-                .map(UiTag::new)
-                .reduce(new ArrayList<UiTag>(), (tags1, tag) -> {
-                    tags1.add(tag);
-                    return tags1;
-                })
-                .subscribe(tags -> this.tags = tags);
+        this.tags = new ArrayList<>();
+        for (catgirl.oneesama.data.model.chapter.serializable.Tag tag : chapter.getTags()) {
+            this.tags.add(new UiTag(tag));
+        }
 
-        Observable.from(chapter.getPages())
-                .map(UiPage::new)
-                .reduce(new ArrayList<UiPage>(), (pages1, page) -> {
-                    pages1.add(page);
-                    return pages1;
-                })
-                .subscribe(pages -> this.pages = pages);
+        this.pages = new ArrayList<>();
+        for (catgirl.oneesama.data.model.chapter.serializable.Page page : chapter.getPages()) {
+            this.pages.add(new UiPage(page));
+        }
 
         this.releasedOn = chapter.getReleasedOn();
         this.addedOn = chapter.getAddedOn();

@@ -23,6 +23,7 @@ import butterknife.BindView;
 import catgirl.oneesama.application.Application;
 import catgirl.oneesama.R;
 import catgirl.oneesama.data.controller.ChaptersController;
+import catgirl.oneesama.data.controller.FileManager;
 import catgirl.oneesama.data.controller.legacy.Book;
 import catgirl.oneesama.data.controller.legacy.BookStateDelegate;
 import catgirl.oneesama.data.controller.legacy.CacherDelegate;
@@ -45,6 +46,7 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 
     @BindView(R.id.BookTitleLayout) Toolbar toolbar;
     @BindView(R.id.ReaderView) ViewGroup readerView;
+    @BindView(R.id.loadingIndicator) View loadingIndicator;
 
     @BindView(R.id.airrender) AirWidgetDrawer airDrawer;
     @BindView(R.id.airtouch) AirViewerRecognizer airRecognizer;
@@ -77,7 +79,7 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 
 	@Inject SettingsProvider<RecentlyOpenedChapters> recentlyOpenedProvider;
 
-    @SuppressWarnings("deprecation")
+	@SuppressWarnings("deprecation")
 	@SuppressLint("NewApi")
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -88,24 +90,23 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 		Log.v("PixelFormat", "format = " + getWindow().getAttributes().format + ", 565 = " + PixelFormat.RGB_565); 
 		
 		WindowManager.LayoutParams lp = getWindow().getAttributes();
-		lp.format = PixelFormat.RGBA_8888;
+		lp.format = PixelFormat.RGB_565;
 		getWindow().setAttributes(lp);
 		
 		Log.v("PixelFormat", "format = " + getWindow().getAttributes().format + ", 565 = " + PixelFormat.RGB_565); 
 		
 		// Set working book controller
 
-		if(savedInstanceState == null)
-			init(getIntent().getExtras().getInt(PUBLICATION_ID, 0), -1);
+		if(savedInstanceState == null) {
+			int bookId = getIntent().getExtras().getInt(PUBLICATION_ID, 0);
+			init(bookId, -1);
+		}
 	}
 
 	public void init(int bookId, int savedCurrentPage) {
-		book = ChaptersController.getInstance().getChapterController(bookId);
+		if (isFinishing()) return;
 
-		// Save last opened date
-		RecentlyOpenedChapters recentlyOpenedChapters = recentlyOpenedProvider.retrieve();
-		recentlyOpenedChapters.refreshOpenDate(bookId);
-		recentlyOpenedProvider.commit(recentlyOpenedChapters);
+		book = ChaptersController.getInstance().getChapterController(bookId);
 
 		if(book == null)
 		{
@@ -140,10 +141,22 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 		setContentView(R.layout.activity_reader);
 		ButterKnife.bind(this);
 
+		// Check if canvas is already initialized (width > 0)
+		if (airDrawer.getWidth() > 0) {
+			onCanvasInitialized();
+		}
+
 		setSupportActionBar(toolbar);
 		getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 		getSupportActionBar().setDisplayShowHomeEnabled(true);
 		toolbar.setNavigationOnClickListener(view -> onBackPressed());
+
+		// Save last opened date asynchronously
+		new Thread(() -> {
+			RecentlyOpenedChapters recentlyOpenedChapters = recentlyOpenedProvider.retrieve();
+			recentlyOpenedChapters.refreshOpenDate(bookId);
+			recentlyOpenedProvider.commit(recentlyOpenedChapters);
+		}).start();
 
 		// Default params
 		MiniBitmapCache.getInstance().mMemoryCache.evictAll();
@@ -183,6 +196,11 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 				onThumbnailsPressed(v);
 			}
 		});
+
+		// Check if canvas is already initialized (width > 0)
+		if (airDrawer.getWidth() > 0) {
+			onCanvasInitialized();
+		}
 	}
 
 	@Override
@@ -249,7 +267,10 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 
 		MiniBitmapCache.getInstance().mMemoryCache.evictAll();
 
-        book.clearCache();
+        if (book != null) {
+            book.clearCache();
+            FileManager.clearCache(book.data.getId());
+        }
 	}
 	
 	String parameter;
@@ -347,6 +368,10 @@ public class ReaderActivity extends BaseActivity implements AirViewerDelegate, A
 		book.cacheAround(pageId, -1);
 		
 		currentPage = pageId;
+
+		if (loadingIndicator != null && loadingIndicator.getVisibility() == View.VISIBLE) {
+			loadingIndicator.setVisibility(View.GONE);
+		}
 
 		Application.getContextOfApplication().getSharedPreferences("savedpages", Context.MODE_PRIVATE).edit().putInt(String.valueOf(book.data.getId()), pageId).commit();
 

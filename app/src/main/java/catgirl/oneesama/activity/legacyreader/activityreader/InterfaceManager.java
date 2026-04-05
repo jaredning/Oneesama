@@ -10,6 +10,8 @@ import android.view.animation.TranslateAnimation;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import catgirl.oneesama.R;
 import catgirl.oneesama.data.controller.legacy.Book;
 import catgirl.oneesama.activity.legacyreader.tools.ActivityUtils;
@@ -21,46 +23,39 @@ public class InterfaceManager {
 	
 	boolean interfaceAnimating = false;
 	
-	ViewGroup interfaceLayout;
-	ViewGroup interfaceTopBar;
+	@BindView(R.id.InterfaceLayout) ViewGroup interfaceLayout;
+	@BindView(R.id.InterfaceTopBar) ViewGroup interfaceTopBar;
 
 	float mdx = 0;
 	float scale = 1;
-	
-	private TextView pageLabel;
-	TextView bookTitle;
-	ProgressBar progressBar;
-	View downloadProgressLayout;
+
+	@BindView(R.id.pageLabel) TextView pageLabel;
+	@BindView(R.id.bookTitle) TextView bookTitle;
+	@BindView(R.id.downloadProgress) ProgressBar progressBar;
+	@BindView(R.id.DownloadProgressLayout) View downloadProgressLayout;
 
 	public InterfaceManager self = this;
 	
 	public InterfaceManager(ReaderActivity activity, Book book) {
 		this.book = book;
 		this.activity = activity;
+		ButterKnife.bind(this, activity);
 	}
 	
 	public void setupInterface()
 	{
-		pageLabel = (TextView) activity.findViewById(R.id.pageLabel);
-		
-		bookTitle = (TextView) activity.findViewById(R.id.bookTitle);
 		bookTitle.setText((activity.updateBook != null ? "Updating: " : "") + book.data.getTitle());
-		
-		interfaceLayout = (ViewGroup) activity.findViewById(R.id.InterfaceLayout);
+
 		interfaceLayout.clearAnimation();
 		interfaceLayout.setVisibility(View.GONE);
-		interfaceTopBar = (ViewGroup) activity.findViewById(R.id.InterfaceTopBar);
 		interfaceTopBar.clearAnimation();
 		interfaceTopBar.setVisibility(View.GONE);
 		ActivityUtils.enableDisableViewGroup(interfaceLayout, false);
 
 		activity.findViewById(R.id.BookTitleLayout).bringToFront();
-		
-		progressBar = (ProgressBar) activity.findViewById(R.id.downloadProgress);
-		downloadProgressLayout = activity.findViewById(R.id.DownloadProgressLayout);
 
 		updateProgress();
-		
+
 		h.postDelayed(r, 10000);
 	}
 	
