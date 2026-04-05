@@ -72,14 +72,18 @@ public class FileManager {
     }
 
     public static DocumentFile getDownloadDirectory(Context context, boolean create) {
-        if (downloadDirCache != null && downloadDirCache.exists()) {
+        if (downloadDirCache != null && downloadDirCache.exists() && DOWNLOAD_FOLDER.equals(downloadDirCache.getName())) {
             return downloadDirCache;
         }
 
         DocumentFile root = getRootFolder(context);
         if (root == null) return null;
 
-        DocumentFile downloadDir = root.findFile(DOWNLOAD_FOLDER);
+        DocumentFile downloadDir = null;
+        DocumentFile found = root.findFile(DOWNLOAD_FOLDER);
+        if (found != null && DOWNLOAD_FOLDER.equals(found.getName())) {
+            downloadDir = found;
+        }
 
         // SAF Hack: sometimes findFile fails but it exists. Iterating listFiles can refresh it.
         if (downloadDir == null) {
@@ -93,9 +97,21 @@ public class FileManager {
 
         if (create && (downloadDir == null || !downloadDir.isDirectory())) {
             downloadDir = root.createDirectory(DOWNLOAD_FOLDER);
+            // If it created "chapters (1)", it means "chapters" exists but was invisible.
+            // Try to recover by searching again now that the provider's cache might be refreshed.
+            if (downloadDir != null && !DOWNLOAD_FOLDER.equals(downloadDir.getName())) {
+                Log.w("FileManager", "Ghost folder detected during createDirectory: " + downloadDir.getName());
+                for (DocumentFile file : root.listFiles()) {
+                    if (DOWNLOAD_FOLDER.equals(file.getName())) {
+                        downloadDir.delete(); // Delete the (1) version
+                        downloadDir = file;   // Use the original
+                        break;
+                    }
+                }
+            }
         }
 
-        if (downloadDir != null) {
+        if (downloadDir != null && DOWNLOAD_FOLDER.equals(downloadDir.getName())) {
             downloadDirCache = downloadDir;
         }
         return downloadDir;
@@ -117,7 +133,11 @@ public class FileManager {
         if (downloadDir == null) return null;
 
         String idStr = String.valueOf(chapterId);
-        DocumentFile chapterDir = downloadDir.findFile(idStr);
+        DocumentFile chapterDir = null;
+        DocumentFile foundChapter = downloadDir.findFile(idStr);
+        if (foundChapter != null && idStr.equals(foundChapter.getName())) {
+            chapterDir = foundChapter;
+        }
 
         if (chapterDir == null) {
             for (DocumentFile file : downloadDir.listFiles()) {
@@ -130,14 +150,26 @@ public class FileManager {
 
         if (create && (chapterDir == null || !chapterDir.isDirectory())) {
             chapterDir = downloadDir.createDirectory(idStr);
+            // Same ghost recovery for chapter subfolders
+            if (chapterDir != null && !idStr.equals(chapterDir.getName())) {
+                Log.w("FileManager", "Ghost chapter folder detected: " + chapterDir.getName());
+                for (DocumentFile file : downloadDir.listFiles()) {
+                    if (idStr.equals(file.getName())) {
+                        chapterDir.delete();
+                        chapterDir = file;
+                        break;
+                    }
+                }
+            }
         }
 
-        if (chapterDir != null) {
+        if (chapterDir != null && idStr.equals(chapterDir.getName())) {
             chapterDirCache.put(chapterId, chapterDir);
         }
 
         return chapterDir;
     }
+
 
     public static File getChapterFolder(int chapterId) {
         return getChapterFolder(chapterId, true);
@@ -225,25 +257,67 @@ public class FileManager {
         return new File(Application.getContextOfApplication().getExternalFilesDir(null), cacheName);
     }
 
+    public static boolean chapterFolderExists(int chapterId) {
+        Context context = Application.getContextOfApplication();
+        DocumentFile downloadDir = getDownloadDirectory(context, false);
+        if (downloadDir != null) {
+            String idStr = String.valueOf(chapterId);
+            DocumentFile foundChapter = downloadDir.findFile(idStr);
+            if (foundChapter != null && idStr.equals(foundChapter.getName())) {
+                return true;
+            }
+            for (DocumentFile file : downloadDir.listFiles()) {
+                if (idStr.equals(file.getName())) {
+                    return true;
+                }
+            }
+        }
+        File folder = new File(Application.getContextOfApplication().getExternalFilesDir(null), DOWNLOAD_FOLDER + File.separator + chapterId);
+        return folder.exists() && folder.isDirectory();
+    }
+
     public static void deleteFolder(int chapterId) {
         clearCache(chapterId);
-        DocumentFile chapterDir = getChapterDirectory(Application.getContextOfApplication(), chapterId, false);
-        if (chapterDir != null) {
-            chapterDir.delete();
-            return;
+        Context context = Application.getContextOfApplication();
+
+        // 1. Try SAF deletion - be VERY aggressive
+        DocumentFile downloadDir = getDownloadDirectory(context, false);
+        if (downloadDir != null) {
+            String idStr = String.valueOf(chapterId);
+            for (DocumentFile file : downloadDir.listFiles()) {
+                String name = file.getName();
+                if (name != null && (name.equals(idStr) || name.startsWith(idStr + " ("))) {
+                    Log.d("FileManager", "Deleting SAF folder: " + name);
+                    // Rename workaround to break ghosting
+                    file.renameTo("del_" + System.currentTimeMillis() + "_" + name);
+                    recursiveDelete(file);
+                }
+            }
         }
 
-        // Some devices have bugs with re-creating formerly deleted directories, hence this workaround
+        // 2. Always clean up internal storage
         try {
-            File folder = getChapterFolder(chapterId, false);
-            if (folder != null && folder.exists()) {
-                File deleted = new File(Application.getContextOfApplication().getExternalFilesDir(null), "deleted/" + chapterId);
-                deleted.mkdirs();
-                folder.renameTo(deleted);
-                FileUtils.deleteDirectory(deleted);
+            File folder = new File(context.getExternalFilesDir(null), DOWNLOAD_FOLDER + File.separator + chapterId);
+            if (folder.exists()) {
+                FileUtils.deleteDirectory(folder);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    private static void recursiveDelete(DocumentFile file) {
+        if (file.isDirectory()) {
+            DocumentFile[] children = file.listFiles();
+            if (children != null) {
+                for (DocumentFile child : children) {
+                    recursiveDelete(child);
+                }
+            }
+        }
+        if (!file.delete()) {
+            Log.e("FileManager", "Failed to delete: " + file.getName());
+        }
+    }
 }
+

@@ -82,15 +82,29 @@ public class ChapterListPresenter extends SimpleRecyclerPresenter<ChapterAuthor,
     }
 
     public void onItemDeletionConfirmed(int position) {
-        chaptersController.deleteChapter(items.get(position).chapter.getId(), () -> {
+        if (items == null || position < 0 || position >= items.size()) {
+            onItemDeletionDismissed();
+            return;
+        }
+
+        final int chapterId = items.get(position).chapter.getId();
+
+        chaptersController.deleteChapter(chapterId, () -> {
             if (getView() != null) {
                 getView().post(() -> {
-                    // Re-calculate position since items might have changed
-                    // but for simplicity we assume only one deletion at a time for now
-                    // In a more robust implementation, we'd match the ID
-                    items.remove(position);
-                    if (getView() != null)
-                        getView().showItemDeleted(position);
+                    if (items == null) return;
+                    int currentPosition = -1;
+                    for (int i = 0; i < items.size(); i++) {
+                        if (items.get(i).chapter.getId() == chapterId) {
+                            currentPosition = i;
+                            break;
+                        }
+                    }
+                    if (currentPosition != -1) {
+                        items.remove(currentPosition);
+                        if (getView() != null)
+                            getView().showItemDeleted(currentPosition);
+                    }
                 });
             }
         });

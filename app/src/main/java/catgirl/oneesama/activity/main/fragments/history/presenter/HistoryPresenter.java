@@ -42,12 +42,29 @@ public class HistoryPresenter extends AutoRefreshableRecyclerPresenter<UiChapter
     }
 
     public void onItemDeletionConfirmed(int position) {
-        chaptersController.deleteChapter(items.get(position).getId(), () -> {
+        if (items == null || position < 0 || position >= items.size()) {
+            onItemDeletionDismissed();
+            return;
+        }
+
+        final int chapterId = items.get(position).getId();
+
+        chaptersController.deleteChapter(chapterId, () -> {
             if (getView() != null) {
                 getView().post(() -> {
-                    items.remove(position);
-                    if (getView() != null)
-                        getView().showItemDeleted(position);
+                    if (items == null) return;
+                    int currentPosition = -1;
+                    for (int i = 0; i < items.size(); i++) {
+                        if (items.get(i).getId() == chapterId) {
+                            currentPosition = i;
+                            break;
+                        }
+                    }
+                    if (currentPosition != -1) {
+                        items.remove(currentPosition);
+                        if (getView() != null)
+                            getView().showItemDeleted(currentPosition);
+                    }
                 });
             }
         });

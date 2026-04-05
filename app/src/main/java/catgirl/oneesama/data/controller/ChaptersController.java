@@ -246,8 +246,7 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                 }
                 
                 // Extra safety: check if the directory exists on disk even if not in DB
-                while (FileManager.getChapterFolder(maxChapterId, false) != null && 
-                       FileManager.getChapterFolder(maxChapterId, false).exists()) {
+                while (FileManager.chapterFolderExists(maxChapterId)) {
                     maxChapterId++;
                 }
 
