@@ -99,29 +99,27 @@ public class ActivityUtils {
 	        int reqWidth, int reqHeight) {
 		if(istr == null)
 			return null;
-		
-		istr.mark(1000000000);
-	    // First decode with inJustDecodeBounds=true to check dimensions
-	    final BitmapFactory.Options options = new BitmapFactory.Options();
-	    options.inJustDecodeBounds = true;
-	    options.inPreferredConfig = Config.ARGB_8888;
 
-	    BitmapFactory.decodeStream(istr, null, options);
-	    
-	    // Calculate inSampleSize
-	    options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+		try {
+			ByteArray a = byteArrayFromStream(istr);
+			final BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
+			BitmapFactory.decodeByteArray(a.array, 0, a.count, options);
 
-	    // Decode bitmap with inSampleSize set
-	    options.inJustDecodeBounds = false;
-	    try {
-			istr.reset();
-		} catch (IOException e) {
+			options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+			options.inPreferredConfig = Bitmap.Config.RGB_565;
+			options.inJustDecodeBounds = false;
+			return BitmapFactory.decodeByteArray(a.array, 0, a.count, options);
+		} catch (Exception e) {
 			e.printStackTrace();
+			return null;
+		} finally {
+			try {
+				istr.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
-
-	    Bitmap b = BitmapFactory.decodeStream(istr, null, options);
-	    
-	    return b;
 	}
 	
 	public static Bitmap decodeBitmap(int resource,

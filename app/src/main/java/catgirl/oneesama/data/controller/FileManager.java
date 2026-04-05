@@ -38,6 +38,12 @@ public class FileManager {
         DocumentFile chapterDir = getChapterDirectory(context, chapterId);
         if (chapterDir == null) return;
 
+        // If it's a regular file (internal storage), we don't need to iterative-cache it
+        // because direct File I/O doesn't suffer from the same lookup penalties as SAF.
+        if (chapterDir.getUri().getScheme().equals("file")) {
+            return;
+        }
+
         Map<String, DocumentFile> fileCache = new HashMap<>();
 
         for (DocumentFile file : chapterDir.listFiles()) {

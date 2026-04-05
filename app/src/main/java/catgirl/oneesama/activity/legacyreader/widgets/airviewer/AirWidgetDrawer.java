@@ -23,7 +23,6 @@ import android.widget.TextView;
 
 import java.util.Map;
 
-import com.nineoldandroids.view.ViewHelper;
 import com.pnikosis.materialishprogress.ProgressWheel;
 
 import catgirl.oneesama.R;
