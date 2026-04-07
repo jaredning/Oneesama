@@ -1,6 +1,6 @@
 # Oneesama v2.0
 ## Experimental Android client for Dynasty Reader
-### Current version: v0.2.1
+### Current version: v0.2.2
 
 This a fork of the original Oneesama app, which can be found here: [http://defiantcatgirl.github.io/Oneesama/](http://defiantcatgirl.github.io/Oneesama/)
 
@@ -16,4 +16,7 @@ As a heads up, this APK only supports **Android 6.0 and above** - the original a
 The app is optimized with Android 7.1.1 in mind, since this is the version of Android running on my personal tablet.
 This fork exists entirely because my tablet supports an external SD card and only has 16 GB of internal storage.
 
-You can download the latest APK [here](https://github.com/jaredning/Oneesama/releases/download/v0.2.1/Oneesama_v0.2.1.apk)
+You can download the latest APK [here](https://github.com/jaredning/Oneesama/releases/download/v0.2.2/Oneesama_v0.2.2.apk)
+
+I'm planning on actively using this app and so I will be maintaining it / making improvements based on my experience as I use it. Feel free to open an issue 
+if you run into any problems or have any other improvements in mind that would improve your experience, and I'll take a look when I can.
