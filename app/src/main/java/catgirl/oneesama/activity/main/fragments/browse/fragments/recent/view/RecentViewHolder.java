@@ -4,7 +4,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.TextView;
 
-import org.apache.commons.lang3.StringUtils;
+import android.text.TextUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +60,7 @@ public class RecentViewHolder extends RecyclerView.ViewHolder {
 
         if (!generalTags.isEmpty()) {
             tags.setVisibility(View.VISIBLE);
-            tags.setText(StringUtils.join(generalTags, ",   "));
+            tags.setText(join(generalTags, ",   "));
         } else {
             tags.setVisibility(View.GONE);
         }
@@ -70,8 +70,8 @@ public class RecentViewHolder extends RecyclerView.ViewHolder {
         } else {
             authorsAndDoujins.setVisibility(View.VISIBLE);
 
-            String authorList = StringUtils.join(authorTags, ", ");
-            String doujinList = StringUtils.join(doujinTags, ", ") + " Doujin";
+            String authorList = join(authorTags, ", ");
+            String doujinList = join(doujinTags, ", ") + " Doujin";
 
             if(authorTags.isEmpty()) {
                 authorsAndDoujins.setText(doujinList);
@@ -83,6 +83,10 @@ public class RecentViewHolder extends RecyclerView.ViewHolder {
         }
 
         statusDelegate.bind(chapter.chapter, chapter.permalink);
+    }
+
+    private String join(List<String> list, String separator) {
+        return TextUtils.join(separator, list);
     }
 
     public interface RecentViewHolderDelegate {

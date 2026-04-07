@@ -1,5 +1,7 @@
 package catgirl.oneesama.data.controller;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,7 +40,7 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
 
     }
 
-    public Book getChapterController(int id) {
+    public synchronized Book getChapterController(int id) {
         if(controllers.containsKey(id))
             return controllers.get(id);
         else {
@@ -67,9 +69,11 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
     // TODO create a data abstraction layer
     public Observable<Book> requestChapterController(final String uri) {
 
-        for (Book book : controllers.values()) {
-            if (book.data.getPermalink().equals(uri)) {
-                return Observable.just(book).observeOn(AndroidSchedulers.mainThread());
+        synchronized (this) {
+            for (Book book : controllers.values()) {
+                if (book.data.getPermalink().equals(uri)) {
+                    return Observable.just(book).observeOn(AndroidSchedulers.mainThread());
+                }
             }
         }
 
@@ -91,15 +95,17 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                     }
                 })
                 .map(response -> {
-                    if (controllers.containsKey(response.getId())) {
-                        return controllers.get(response.getId());
+                    synchronized (this) {
+                        if (controllers.containsKey(response.getId())) {
+                            return controllers.get(response.getId());
+                        }
+                        UiChapter chapter = new UiChapter(response);
+                        Book book = new Book(chapter, this, this, false, null);
+                        controllers.put(response.getId(), book);
+                        book.startDownload();
+                        publisher.onNext(chapter);
+                        return book;
                     }
-                    UiChapter chapter = new UiChapter(response);
-                    Book book = new Book(chapter, this, this, false, null);
-                    controllers.put(response.getId(), book);
-                    book.startDownload();
-                    publisher.onNext(chapter);
-                    return book;
                 })
                 .observeOn(AndroidSchedulers.mainThread());
     }
@@ -154,44 +160,52 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         
         // Run on a background thread to avoid UI block and Realm "writes on UI thread" exception
         new Thread(() -> {
-            Realm realm = Realm.getDefaultInstance();
             try {
-                realm.executeTransaction(r -> {
-                    Chapter chapter = r.where(Chapter.class).equalTo("id", id).findFirst();
-                    if (chapter != null) {
-                        List<RealmObject> toRemove = new ArrayList<>();
+                Realm realm = Realm.getDefaultInstance();
+                try {
+                    realm.executeTransaction(r -> {
+                        Chapter chapter = r.where(Chapter.class).equalTo("id", id).findFirst();
+                        if (chapter != null) {
+                            List<RealmObject> toRemove = new ArrayList<>();
 
-                        // Collect orphaned pages
-                        toRemove.addAll(chapter.getPages());
+                            // Collect orphaned pages
+                            toRemove.addAll(chapter.getPages());
 
-                        List<catgirl.oneesama.data.model.chapter.serializable.Tag> tags = new ArrayList<>(chapter.getTags());
+                            List<catgirl.oneesama.data.model.chapter.serializable.Tag> tags = new ArrayList<>(chapter.getTags());
 
-                        chapter.deleteFromRealm();
+                            chapter.deleteFromRealm();
 
-                        // Collect orphaned tags
-                        for (catgirl.oneesama.data.model.chapter.serializable.Tag tag : tags) {
-                            if (r.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
-                                toRemove.add(tag);
+                            // Collect orphaned tags
+                            for (catgirl.oneesama.data.model.chapter.serializable.Tag tag : tags) {
+                                if (r.where(Chapter.class).equalTo("tags.id", tag.getId()).count() == 0)
+                                    toRemove.add(tag);
+                            }
+
+                            // Clean orphaned tags and pages
+                            for (RealmObject object : toRemove)
+                                object.deleteFromRealm();
                         }
+                    });
+                } finally {
+                    realm.close();
+                }
 
-                        // Clean orphaned tags and pages
-                        for (RealmObject object : toRemove)
-                            object.deleteFromRealm();
-                    }
-                });
-            } finally {
-                realm.close();
-            }
+                FileManager.deleteFolder(id);
 
-            FileManager.deleteFolder(id);
-
-            if (listener != null) {
-                listener.onDeletionFinished();
+                if (listener != null) {
+                    listener.onDeletionFinished();
+                }
+            } catch (Exception e) {
+                Log.e("ChaptersController", "Error during background deletion for id " + id, e);
+                // Even on error, we should probably trigger the listener if it exists to unlock UI
+                if (listener != null) {
+                    listener.onDeletionFinished();
+                }
             }
         }).start();
     }
 
-    public void checkTagIdsAgainstLocalDatabase(List<Tag> tags) {
+    public synchronized void checkTagIdsAgainstLocalDatabase(List<Tag> tags) {
         // Dynasty API does not have IDs anymore
         // It makes sense, but now we have to assign IDs manually
         String name;
@@ -202,9 +216,14 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
         try {
             int maxTagId = 1;
 
-            if (realm.where(Tag.class).findAll().size() > 0)
-                maxTagId = realm.where(Tag.class).max("id").intValue() + 1;
+            if (realm.where(Tag.class).count() > 0) {
+                Number max = realm.where(Tag.class).max("id");
+                if (max != null) {
+                    maxTagId = max.intValue() + 1;
+                }
+            }
 
+            realm.beginTransaction();
             for (Tag tag : tags) {
                 name = tag.getName();
                 type = tag.getType();
@@ -219,10 +238,12 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                 if (existing == null) {
                     tag.setId(maxTagId);
                     maxTagId++;
+                    realm.copyToRealmOrUpdate(tag);
                 } else {
                     tag.setId(existing.getId());
                 }
             }
+            realm.commitTransaction();
         } finally {
             realm.close();
         }
@@ -247,10 +268,16 @@ public class ChaptersController implements BookStateDelegate, CacherDelegate {
                 
                 // Extra safety: check if the directory exists on disk even if not in DB
                 while (FileManager.chapterFolderExists(maxChapterId)) {
+                    Log.w("ChaptersController", "Chapter folder for ID " + maxChapterId + " exists but is not in database. Skipping ID.");
                     maxChapterId++;
                 }
 
                 chapter.setId(maxChapterId);
+
+                // Persist immediately to reserve the ID
+                realm.beginTransaction();
+                realm.copyToRealmOrUpdate(chapter);
+                realm.commitTransaction();
             } else {
                 chapter.setId(existing.getId());
             }

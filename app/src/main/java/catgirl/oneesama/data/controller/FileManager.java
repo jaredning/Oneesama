@@ -6,7 +6,6 @@ import android.util.Log;
 
 import androidx.documentfile.provider.DocumentFile;
 
-import org.apache.commons.io.FileUtils;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -14,8 +13,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import catgirl.oneesama.application.Application;
 import catgirl.oneesama.data.model.chapter.ui.UiPage;
@@ -25,9 +24,9 @@ public class FileManager {
 
     public static String DOWNLOAD_FOLDER = "chapters";
 
-    private static Map<Integer, Map<String, DocumentFile>> chapterFileCache = new HashMap<>();
-    private static Map<Integer, DocumentFile> chapterDirCache = new HashMap<>();
-    private static DocumentFile downloadDirCache = null;
+    private static Map<Integer, Map<String, DocumentFile>> chapterFileCache = new ConcurrentHashMap<>();
+    private static Map<Integer, DocumentFile> chapterDirCache = new ConcurrentHashMap<>();
+    private static volatile DocumentFile downloadDirCache = null;
 
     public static void clearCache(int chapterId) {
         chapterFileCache.remove(chapterId);
@@ -44,7 +43,7 @@ public class FileManager {
             return;
         }
 
-        Map<String, DocumentFile> fileCache = new HashMap<>();
+        Map<String, DocumentFile> fileCache = new ConcurrentHashMap<>();
 
         for (DocumentFile file : chapterDir.listFiles()) {
             String name = file.getName();
@@ -71,7 +70,7 @@ public class FileManager {
         return getDownloadDirectory(context, true);
     }
 
-    public static DocumentFile getDownloadDirectory(Context context, boolean create) {
+    public synchronized static DocumentFile getDownloadDirectory(Context context, boolean create) {
         if (downloadDirCache != null && downloadDirCache.exists() && DOWNLOAD_FOLDER.equals(downloadDirCache.getName())) {
             return downloadDirCache;
         }
@@ -121,7 +120,7 @@ public class FileManager {
         return getChapterDirectory(context, chapterId, true);
     }
 
-    public static DocumentFile getChapterDirectory(Context context, int chapterId, boolean create) {
+    public synchronized static DocumentFile getChapterDirectory(Context context, int chapterId, boolean create) {
         if (chapterDirCache.containsKey(chapterId)) {
             DocumentFile cached = chapterDirCache.get(chapterId);
             if (cached != null && cached.exists()) {
@@ -189,7 +188,7 @@ public class FileManager {
         return folder;
     }
 
-    public static DocumentFile getPageDocumentFile(Context context, int chapterId, UiPage page) {
+    public synchronized static DocumentFile getPageDocumentFile(Context context, int chapterId, UiPage page) {
         String[] parts = page.getUrl().split("/");
         String fileName = parts[parts.length - 1];
 
@@ -207,7 +206,7 @@ public class FileManager {
         DocumentFile file = chapterDir.findFile(fileName);
         if (file != null) {
             if (fileCache == null) {
-                fileCache = new HashMap<>();
+                fileCache = new ConcurrentHashMap<>();
                 chapterFileCache.put(chapterId, fileCache);
             }
             fileCache.put(fileName, file);
@@ -296,27 +295,50 @@ public class FileManager {
         }
 
         // 2. Always clean up internal storage
-        try {
-            File folder = new File(context.getExternalFilesDir(null), DOWNLOAD_FOLDER + File.separator + chapterId);
-            if (folder.exists()) {
-                FileUtils.deleteDirectory(folder);
+        File folder = new File(context.getExternalFilesDir(null), DOWNLOAD_FOLDER + File.separator + chapterId);
+        if (folder.exists()) {
+            manualDeleteDirectory(folder);
+        }
+    }
+
+    private static void manualDeleteDirectory(File directory) {
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    manualDeleteDirectory(file);
+                } else {
+                    if (!file.delete()) {
+                        Log.e("FileManager", "Failed to delete file: " + file.getAbsolutePath());
+                    }
+                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        }
+        if (!directory.delete()) {
+            Log.e("FileManager", "Failed to delete directory: " + directory.getAbsolutePath());
         }
     }
 
     private static void recursiveDelete(DocumentFile file) {
-        if (file.isDirectory()) {
-            DocumentFile[] children = file.listFiles();
-            if (children != null) {
-                for (DocumentFile child : children) {
-                    recursiveDelete(child);
+        try {
+            if (file.isDirectory()) {
+                DocumentFile[] children = file.listFiles();
+                if (children != null) {
+                    for (DocumentFile child : children) {
+                        recursiveDelete(child);
+                    }
                 }
             }
+        } catch (Exception e) {
+            Log.e("FileManager", "Error during recursive directory traversal: " + file.getUri(), e);
         }
-        if (!file.delete()) {
-            Log.e("FileManager", "Failed to delete: " + file.getName());
+
+        try {
+            if (file.exists() && !file.delete()) {
+                Log.e("FileManager", "Failed to delete: " + file.getName());
+            }
+        } catch (Exception e) {
+            Log.e("FileManager", "Error deleting file: " + file.getUri(), e);
         }
     }
 }

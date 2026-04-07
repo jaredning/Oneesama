@@ -14,7 +14,7 @@ import catgirl.oneesama.data.network.scraper.DynastyPage;
 public class DynastySeriesPageProvider {
     static Map<String, DynastySeriesPage> cache = new HashMap<>();
 
-    public static DynastySeriesPage provideSeriesPage(String seriesId) throws Exception {
+    public synchronized static DynastySeriesPage provideSeriesPage(String seriesId) throws Exception {
 
         DynastySeriesPage seriesPage = new DynastySeriesPage();
 
@@ -43,7 +43,7 @@ public class DynastySeriesPageProvider {
         return seriesPage;
     }
 
-    public static DynastySeriesPage.Chapter provideChapterInfo(String seriesId, String chapterId) throws Exception {
+    public synchronized static DynastySeriesPage.Chapter provideChapterInfo(String seriesId, String chapterId) throws Exception {
         if(cache.containsKey(seriesId)) {
             Log.v("Debug", "Cached");
             DynastySeriesPage.Chapter c = cache.get(seriesId).getChapter(chapterId);

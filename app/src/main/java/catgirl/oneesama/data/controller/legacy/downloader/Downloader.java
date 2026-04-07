@@ -199,11 +199,15 @@ public class Downloader {
 							success = false;
 						} else {
 							DocumentFile chapterDir = FileManager.getChapterDirectory(Application.getContextOfApplication(), bookId);
-							if (chapterDir != null) {
+							if (chapterDir != null && chapterDir.exists()) {
 								String[] parts = page.getUrl().split("/");
 								String fileName = parts[parts.length - 1];
 								DocumentFile file = chapterDir.findFile(fileName);
-								if (file != null) file.delete();
+								if (file != null) {
+									// Rename before delete to avoid SAF ghosting/concurrency issues
+									file.renameTo("del_" + System.currentTimeMillis() + "_" + fileName);
+									file.delete();
+								}
 								file = chapterDir.createFile("image/*", fileName);
 								if (file != null) {
 									try (InputStream in = new FileInputStream(src);
@@ -291,7 +295,7 @@ public class Downloader {
 
 	boolean isCancelled = false;
 	
-	private RetStream openDownloadStream(String inurl) throws Exception
+	private synchronized RetStream openDownloadStream(String inurl) throws Exception
 	{
 		URL url = null;
 
